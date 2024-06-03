@@ -3,6 +3,20 @@ open Def
 open Gwdb
 open Util
 
+
+let file_copy input_name output_name =
+  let fd_in = Unix.openfile input_name [O_RDONLY] 0 in
+  let fd_out = Unix.openfile output_name [O_WRONLY; O_CREAT; O_TRUNC] 0o666 in
+let buffer_size = 8192 in
+let buffer = Bytes.create buffer_size in
+  let rec copy_loop () = match Unix.read fd_in buffer 0 buffer_size with
+    |  0 -> ()
+    | r -> ignore (Unix.write fd_out buffer 0 r); copy_loop ()
+  in
+  copy_loop ();
+  Unix.close fd_in;
+  Unix.close fd_out
+
 let rn fname s =
   try if Sys.file_exists fname then Sys.rename fname s
   with Failure _ ->
@@ -84,6 +98,38 @@ let move_file_to_save file dir =
     if Sys.file_exists orig_file_s then rn orig_file_s saved_file_s;
     1
   with _ -> 0
+
+let create_blason_stop conf base p =
+  let blason_dir = Image.get_dir_name "blasons" conf.bname in
+  let blason_stop =
+    String.concat Filename.dir_sep
+      [ blason_dir; Image.default_image_filename "blasons" base p ^ ".stop" ]
+  in
+  let oc = open_out blason_stop in
+  close_out oc;
+  blason_stop
+
+let move_blason_file conf base src dst =
+  let blason_dir = Image.get_dir_name "blasons" conf.bname in
+  let blason_src =
+    String.concat Filename.dir_sep
+      [ blason_dir; Image.get_blason_name conf base src true ]
+  in
+  if
+    Image.has_blason conf base src true
+    && Sys.file_exists blason_src
+    && not (Image.has_blason conf base dst true)
+  then (
+    let blason_dst =
+      String.concat Filename.dir_sep
+        [
+          blason_dir;
+          Image.default_image_filename "blasons" base dst ^ Filename.extension blason_src;
+        ]
+    in
+    rn blason_src blason_dst;
+    blason_dst)
+  else ""
 
 let normal_image_type s =
   if String.length s > 10 && Char.code s.[0] = 0xff && Char.code s.[1] = 0xd8
@@ -187,13 +233,14 @@ let get_extension conf saved fname =
   else if Sys.file_exists (f ^ ".png") then ".png"
   else if Sys.file_exists (f ^ ".gif") then ".gif"
   else if Sys.file_exists (f ^ ".url") then ".url"
+  else if Sys.file_exists (f ^ ".stop") then ".stop"
   else "."
 
 let print_confirm_c conf base save_m report =
   match Util.p_getint conf.env "i" with
   | Some ip ->
       let p = poi base (Gwdb.iper_of_string (string_of_int ip)) in
-      let digest = Image.default_portrait_filename base p in
+      let digest = Image.default_image_filename "portraits" base p in
       let new_env =
         List.fold_left
           (fun accu (k, v) ->
@@ -284,6 +331,56 @@ let print_send_image conf base p =
   print_link_delete_image conf base p;
   Hutil.trailer conf
 
+let print_send_family_image conf base p =
+  let title h =
+    if Option.is_some @@ Image.get_blason conf base p true then
+      transl_nth conf "image/images" 0
+      |> transl_decline conf "modify"
+      |> Utf8.capitalize_fst |> Output.print_sstring conf
+    else
+      transl_nth conf "image/images" 0
+      |> transl_decline conf "add" |> Utf8.capitalize_fst
+      |> Output.print_sstring conf;
+    if not h then (
+      Output.print_sstring conf (transl conf ": ");
+      Output.print_sstring conf (transl_nth conf "family/families" 0);
+      Output.print_sstring conf " ";
+      Output.print_string conf (Util.escape_html (p_surname base p)))
+  in
+  let digest = Update.digest_person (UpdateInd.string_person_of base p) in
+  Perso.interp_notempl_with_menu title "perso_header" conf base p;
+  Output.print_sstring conf "<h2>\n";
+  title false;
+  Output.print_sstring conf "</h2>\n";
+  Output.printf conf
+    "<form method=\"post\" action=\"%s\" enctype=\"multipart/form-data\">\n"
+    conf.command;
+  Output.print_sstring conf "<p>\n";
+  Util.hidden_env conf;
+  Util.hidden_input conf "m" (Adef.encoded "SND_FIMAGE_OK");
+  Util.hidden_input conf "i" (get_iper p |> string_of_iper |> Mutil.encode);
+  Util.hidden_input conf "digest" (Mutil.encode digest);
+  Output.print_sstring conf (Utf8.capitalize_fst (transl conf "file"));
+  Output.print_sstring conf (Util.transl conf ":");
+  Output.print_sstring conf " ";
+  Output.print_sstring conf
+    {| <input type="file" class="form-control-file" name="file" accept="image/*"></p>|};
+  (match
+     Option.map int_of_string @@ List.assoc_opt "max_images_size" conf.base_env
+   with
+  | Some len ->
+      Output.print_sstring conf "<p>(maximum authorized size = ";
+      Output.print_sstring conf (string_of_int len);
+      Output.print_sstring conf " bytes)</p>"
+  | None -> ());
+  Output.print_sstring conf
+    {|<button type="submit" class="btn btn-primary mt-2">|};
+  transl_nth conf "validate/delete" 0
+  |> Utf8.capitalize_fst |> Output.print_sstring conf;
+  Output.print_sstring conf "</button></form>";
+  print_link_delete_image conf base p;
+  Hutil.trailer conf
+
 let print_sent conf base p =
   let title _ =
     transl conf "image received"
@@ -329,7 +426,56 @@ let effective_send_ok conf base p file =
             error_too_big_image conf base p (String.length content) len
         | _ -> (typ, content))
   in
-  let fname = Image.default_portrait_filename base p in
+  let fname = Image.default_image_filename "portraits" base p in
+  let dir = Util.base_path [ "images" ] conf.bname in
+  if not (Sys.file_exists dir) then Mutil.mkdir_p dir;
+  let fname =
+    Filename.concat dir
+      (if mode = "portraits" then fname ^ extension_of_type typ else fname)
+  in
+  let _moved = move_file_to_save fname dir in
+  write_file fname content;
+  let changed =
+    U_Send_image (Util.string_gen_person base (gen_person_of_person p))
+  in
+  History.record conf base changed "si";
+  print_sent conf base p
+
+let effective_family_send_ok conf base p file =
+  let mode =
+    try (List.assoc "mode" conf.env :> string) with Not_found -> "portraits"
+  in
+  let strm = Stream.of_string file in
+  let request, content = Wserver.get_request_and_content strm in
+  let content =
+    let s =
+      let rec loop len (strm__ : _ Stream.t) =
+        match Stream.peek strm__ with
+        | Some x ->
+            Stream.junk strm__;
+            loop (Buff.store len x) strm
+        | _ -> Buff.get len
+      in
+      loop 0 strm
+    in
+    (content :> string) ^ s
+  in
+  let typ, content =
+    match image_type content with
+    | None ->
+        dump_bad_image conf content;
+        Mutil.extract_param "content-type: " '\n' request
+        |> incorrect_content_type conf base p
+    | Some (typ, content) -> (
+        match
+          Option.map int_of_string
+          @@ List.assoc_opt "max_images_size" conf.base_env
+        with
+        | Some len when String.length content > len ->
+            error_too_big_image conf base p (String.length content) len
+        | _ -> (typ, content))
+  in
+  let fname = Image.default_image_filename "blasons" base p in
   let dir = Util.base_path [ "images" ] conf.bname in
   if not (Sys.file_exists dir) then Mutil.mkdir_p dir;
   let fname =
@@ -355,8 +501,20 @@ let print_send_ok conf base =
     raw_get conf "file" |> Adef.as_string |> effective_send_ok conf base p
   else Update.error_digest conf
 
+let print_family_send_ok conf base =
+  let ip =
+    try raw_get conf "i" |> Mutil.decode |> iper_of_string
+    with Failure _ -> incorrect conf "print family send ok"
+  in
+  let p = poi base ip in
+  let digest = Update.digest_person (UpdateInd.string_person_of base p) in
+  if (digest :> string) = Mutil.decode (raw_get conf "digest") then
+    raw_get conf "file" |> Adef.as_string
+    |> effective_family_send_ok conf base p
+  else Update.error_digest conf
+
 (* carrousel *)
-let effective_send_c_ok conf base p file file_name =
+let effective_send_c_ok ?(portrait = true) conf base p file file_name =
   let mode =
     try (List.assoc "mode" conf.env :> string) with Not_found -> "portraits"
   in
@@ -412,7 +570,10 @@ let effective_send_c_ok conf base p file file_name =
           | _ -> (typ, content))
     else (GIF, content (* we dont care which type, content = "" *))
   in
-  let fname = Image.default_portrait_filename base p in
+  let fname =
+    if portrait then Image.default_image_filename "portraits" base p
+    else Image.default_image_filename "blasons" base p
+  in
   let dir =
     if mode = "portraits" then
       String.concat Filename.dir_sep [ Util.base_path [ "images" ] conf.bname ]
@@ -426,12 +587,18 @@ let effective_send_c_ok conf base p file file_name =
       (if mode = "portraits" then fname ^ extension_of_type typ else file_name)
   in
   if mode = "portraits" then
-    match Image.get_portrait conf base p with
+    match
+      if portrait then Image.get_portrait conf base p
+      else Image.get_blason conf base p true
+    with
     | Some (`Path portrait) ->
         if move_file_to_save portrait dir = 0 then
           incorrect conf "effective send (portrait)"
     | Some (`Url url) -> (
-        let fname = Image.default_portrait_filename base p in
+        let fname =
+          if portrait then Image.default_image_filename "portraits" base p
+          else Image.default_image_filename "blasons" base p
+        in
         let dir = Filename.concat dir "old" in
         if not (Sys.file_exists dir) then Mutil.mkdir_p dir;
         let fname = Filename.concat dir fname ^ ".url" in
@@ -478,7 +645,7 @@ let effective_send_c_ok conf base p file file_name =
     U_Send_image (Util.string_gen_person base (gen_person_of_person p))
   in
   History.record conf base changed
-    (if mode = "portraits" then "si"
+    (if mode = "portraits" then (if portrait then "si" else "ca")
     else if file_name <> "" && note <> Adef.safe "" && source <> Adef.safe ""
    then "sb"
     else if file_name <> "" then "so"
@@ -529,7 +696,7 @@ let print_deleted conf base p =
   Hutil.trailer conf
 
 let effective_delete_ok conf base p =
-  let fname = Image.default_portrait_filename base p in
+  let fname = Image.default_image_filename "portraits" base p in
   let ext = get_extension conf false fname in
   let dir = Util.base_path [ "images" ] conf.bname in
   if move_file_to_save (fname ^ ext) dir = 0 then
@@ -560,8 +727,11 @@ let print_del conf base =
 (* removes portrait or other image and saves it into old folder *)
 (* if delete=on permanently deletes the file in old folder *)
 
-let effective_delete_c_ok conf base p =
-  let fname = Image.default_portrait_filename base p in
+let effective_delete_c_ok ?(portrait = true) conf base p =
+  let fname =
+    if portrait then Image.default_image_filename "portraits" base p
+    else Image.default_image_filename "blasons" base p
+  in
   let file_name =
     try List.assoc "file_name" conf.env with Not_found -> Adef.encoded ""
   in
@@ -589,17 +759,33 @@ let effective_delete_c_ok conf base p =
   let changed =
     U_Delete_image (Util.string_gen_person base (gen_person_of_person p))
   in
-  History.record conf base changed (if mode = "portraits" then "di" else "do");
+  History.record conf base changed (if mode = "portraits" then (if portrait then "di" else "dc") else "do");
   file_name
+
+let effective_copy_portrait_to_blason conf base p =
+  let has_blason_self = Image.has_blason conf base p true in 
+  let _ = (if has_blason_self then effective_delete_c_ok ~portrait:false conf base p else "OK") <> "" in
+  let dir = Util.base_path [ "images" ] conf.bname in
+  let fname = Image.default_image_filename "portraits" base p in
+  let ext = get_extension conf false fname in
+  let portrait_filename = String.concat Filename.dir_sep [ dir; fname ^ ext] in
+  let blason_filename = String.concat Filename.dir_sep [ dir; (Image.default_image_filename "blasons" base p) ^ ext] in
+  file_copy portrait_filename blason_filename;
+  let _ = effective_delete_c_ok ~portrait:true conf base p in
+  History.record conf base (U_Send_image (Util.string_gen_person base (gen_person_of_person p))) "ca";
+  blason_filename
 
 (* carrousel *)
 (* reset portrait or image from old folder to portrait or others *)
 
-let effective_reset_c_ok conf base p =
+let effective_reset_c_ok ?(portrait = true) conf base p =
   let mode =
     try (List.assoc "mode" conf.env :> string) with Not_found -> "portraits"
   in
-  let carrousel = Image.default_portrait_filename base p in
+  let carrousel =
+    if portrait then Image.default_image_filename "portraits" base p
+    else Image.default_image_filename "blasons" base p
+  in
   let file_name =
     try List.assoc "file_name" conf.env with Not_found -> Adef.encoded ""
   in
@@ -617,14 +803,17 @@ let effective_reset_c_ok conf base p =
   let file_in_new =
     if mode = "portraits" then
       String.concat Filename.dir_sep
-        [ Util.base_path [ "images" ] conf.bname; file_name ^ ext ]
+        [ Util.base_path [ "images" ] conf.bname; file_name ^ old_ext ]
     else
       String.concat Filename.dir_sep
         [ Util.base_path [ "src" ] conf.bname; "images"; carrousel; file_name ]
   in
   (if Sys.file_exists file_in_new then ()
   else
-    match Image.get_portrait conf base p with
+    match
+      if portrait then Image.get_portrait conf base p
+      else Image.get_blason conf base p true
+    with
     | Some (`Url url) -> (
         try write_file file_in_new url
         with _ ->
@@ -632,6 +821,10 @@ let effective_reset_c_ok conf base p =
             (Printf.sprintf "reset portrait (swap file %s)" file_in_new))
     | _ -> ());
   swap_files file_in_new ext old_ext;
+  let changed =
+    U_Send_image (Util.string_gen_person base (gen_person_of_person p))
+  in
+  History.record conf base changed (if portrait then "ri" else "rc");
   file_name
 
 (* ************************************************************************** *)
@@ -652,7 +845,7 @@ let print_main_c conf base =
           match Util.p_getenv conf.env "i" with
           | Some ip -> (
               let p = poi base (Gwdb.iper_of_string ip) in
-              let digest = Image.default_portrait_filename base p in
+              let digest = Image.default_image_filename "portraits" base p in
               let conf, report =
                 match Util.p_getenv conf.env "m" with
                 | Some "SND_IMAGE_C_OK" ->
@@ -691,24 +884,59 @@ let print_main_c conf base =
                       try (List.assoc "idigest" conf.env :> string)
                       with Not_found -> ""
                     in
+                    let fdigest =
+                      try (List.assoc "fdigest" conf.env :> string)
+                      with Not_found -> ""
+                    in
                     if digest = idigest then
-                      (conf, effective_send_c_ok conf base p file file_name)
+                      ( conf,
+                        effective_send_c_ok
+                          ~portrait:(if idigest = fdigest then false else true)
+                          conf base p file file_name )
                     else (conf, "idigest error")
                 | Some "DEL_IMAGE_C_OK" ->
                     let idigest =
                       try (List.assoc "idigest" conf.env :> string)
                       with Not_found -> ""
                     in
+                    let fdigest =
+                      try (List.assoc "fdigest" conf.env :> string)
+                      with Not_found -> ""
+                    in
                     if digest = idigest then
                       (conf, effective_delete_c_ok conf base p)
+                    else if fdigest != "" then
+                      (conf, effective_delete_c_ok ~portrait:false conf base p)
                     else (conf, "idigest error")
                 | Some "RESET_IMAGE_C_OK" ->
                     let idigest =
                       try (List.assoc "idigest" conf.env :> string)
                       with Not_found -> ""
                     in
+                    let fdigest =
+                      try (List.assoc "fdigest" conf.env :> string)
+                      with Not_found -> ""
+                    in
                     if digest = idigest then
                       (conf, effective_reset_c_ok conf base p)
+                    else if fdigest != "" then
+                      (conf, effective_reset_c_ok ~portrait:false conf base p)
+                    else (conf, "idigest error")
+                | Some "BLASON_UP_ONE" -> (
+                    let has_blason_self = Image.has_blason conf base p true in
+                    match get_parents p with
+                    | Some ifam when has_blason_self ->
+                        let cpl = foi base ifam in
+                        let fa = poi base (get_father cpl) in
+                        (conf, move_blason_file conf base p fa)
+                    | _ -> (conf, "idigest error"))
+                | Some "PORTRAIT_TO_BLASON" -> 
+                  (conf, effective_copy_portrait_to_blason conf base p)
+                | Some "BLASON_STOP" ->
+                    let has_blason_self = Image.has_blason conf base p true in
+                    let has_blason = Image.has_blason conf base p false in
+                    if has_blason && not has_blason_self then
+                      (conf, create_blason_stop conf base p)
                     else (conf, "idigest error")
                 | Some "IMAGE_C" -> (conf, "image")
                 | _ -> (conf, "incorrect request")
@@ -735,18 +963,31 @@ let print conf base =
       if fn = "?" || sn = "?" then Hutil.incorrect_request conf
       else print_send_image conf base p
 
+let print_family conf base =
+  match p_getenv conf.env "i" with
+  | None -> Hutil.incorrect_request conf
+  | Some ip ->
+      let p = poi base (iper_of_string ip) in
+      let sn = p_surname base p in
+      if sn = "?" then Hutil.incorrect_request conf
+      else print_send_family_image conf base p
+
 (* carrousel *)
-let print_c ?(saved = false) conf base =
+let print_c ?(saved = false) ?(portrait = true) conf base =
   match (Util.p_getenv conf.env "s", Util.find_person_in_env conf base "") with
   | Some f, Some p ->
-      let k = Image.default_portrait_filename base p in
+      let k =
+        if portrait then Image.default_image_filename "portraits" base p
+        else Image.default_image_filename "blasons" base p
+      in
       let f = Filename.concat k f in
       ImageDisplay.print_source conf (if saved then insert_saved f else f)
   | Some f, _ -> ImageDisplay.print_source conf f
   | _, Some p -> (
       match
-        (if saved then Image.get_old_portrait else Image.get_portrait)
-          conf base p
+        if saved then Image.get_old_portrait conf base p
+        else if portrait then Image.get_portrait conf base p
+        else Image.get_blason conf base p false
       with
       | Some (`Path f) ->
           Result.fold ~ok:ignore
