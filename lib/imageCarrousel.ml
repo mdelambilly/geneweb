@@ -80,8 +80,7 @@ let write_file fname content =
   flush oc;
   close_out oc
 
-let move_file_to_save file dir =
-  (* previous version iterated on file types *)
+let move_file_to_save dir file =
   try
     let save_dir = Filename.concat dir "old" in
     if not (Sys.file_exists save_dir) then Mutil.mkdir_p save_dir;
@@ -432,7 +431,7 @@ let effective_send_ok conf base p file =
     Filename.concat dir
       (if mode = "portraits" then fname ^ extension_of_type typ else fname)
   in
-  let _moved = move_file_to_save fname dir in
+  let _moved = move_file_to_save dir fname in
   write_file fname content;
   let changed =
     U_Send_image (Util.string_gen_person base (gen_person_of_person p))
@@ -481,7 +480,7 @@ let effective_blason_send_ok conf base p file =
     Filename.concat dir
       (if mode = "portraits" then fname ^ extension_of_type typ else fname)
   in
-  let _moved = move_file_to_save fname dir in
+  let _moved = move_file_to_save dir fname in
   write_file fname content;
   let changed =
     U_Send_image (Util.string_gen_person base (gen_person_of_person p))
@@ -591,7 +590,7 @@ let effective_send_c_ok ?(portrait = true) conf base p file file_name =
       else Image.get_blason conf base p true
     with
     | Some (`Path portrait) ->
-        if move_file_to_save portrait dir = 0 then
+        if move_file_to_save dir portrait = 0 then
           incorrect conf "effective send (portrait)"
     | Some (`Url url) -> (
         let fname =
@@ -610,7 +609,7 @@ let effective_send_c_ok ?(portrait = true) conf base p file file_name =
     | _ -> ()
   else if content <> "" then
     if Sys.file_exists fname then
-      if move_file_to_save fname dir = 0 then
+      if move_file_to_save dir fname = 0 then
         incorrect conf "effective send (image)";
   let fname =
     if image_url <> "" then Filename.concat dir image_name ^ ".url" else fname
@@ -698,7 +697,7 @@ let effective_delete_ok conf base p =
   let fname = Image.default_image_filename "portraits" base p in
   let ext = get_extension conf false fname in
   let dir = Util.base_path [ "images" ] conf.bname in
-  if move_file_to_save (fname ^ ext) dir = 0 then
+  if move_file_to_save dir (fname ^ ext) = 0 then
     incorrect conf "effective delete";
   let changed =
     U_Delete_image (Util.string_gen_person base (gen_person_of_person p))
@@ -734,6 +733,7 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
     try List.assoc "delete" conf.env = Adef.encoded "on"
     with Not_found -> false
   in
+  let keydir = Image.default_image_filename "portraits" base p in
   let fname =
     if portrait then
       match
@@ -753,16 +753,16 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
   in
   let file = if file_name = "" then fname else file_name in
   let dir =
-    if mode = "portraits" then Util.base_path [ "images" ] conf.bname
+    if mode = "portraits" then Util.base_path [ "images"; keydir ] conf.bname
     else
       String.concat Filename.dir_sep
-        [ Util.base_path [ "src" ] conf.bname; "images"; fname ]
+        [ Util.base_path [ "src" ] conf.bname; "images"; keydir ]
   in
   if not (Sys.file_exists dir) then Mutil.mkdir_p dir;
   (* TODO verify we dont destroy a saved image
       having the same name as portrait! *)
   if delete then Mutil.rm (String.concat Filename.dir_sep [ dir; "old"; file ])
-  else if move_file_to_save file dir = 0 then incorrect conf "effective delete";
+  else if move_file_to_save dir file = 0 then incorrect conf "effective delete";
   let changed =
     U_Delete_image (Util.string_gen_person base (gen_person_of_person p))
   in
