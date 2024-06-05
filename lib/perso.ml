@@ -3483,7 +3483,7 @@ and eval_bool_person_field conf base env (p, p_auth) = function
       | Some (`Url _url) -> true
       | _ -> false)
   | "has_blason_url" -> (
-      match Image.get_blason conf base p true with
+      match Image.get_blason conf base p true true with
       | Some (`Url _url) -> true
       | _ -> false)
   | "has_old_blason_url" -> (
@@ -3622,6 +3622,7 @@ and eval_str_person_field conf base env ((p, p_auth) as ep) = function
       (* TODO what do we want here? can we remove this? *)
       match Image.get_portrait_path conf base p with
       | Some (`Path s) -> str_val s
+      | Some (`Url u) -> str_val u
       | None -> null_val)
   | "birth_place" ->
       if p_auth then
@@ -3774,13 +3775,11 @@ and eval_str_person_field conf base env ((p, p_auth) as ep) = function
       | Some (`Url u) -> str_val u
       | None -> null_val)
   | "blason" -> (
-      match Image.get_blason conf base p false with
-      | Some (`Path p) when Filename.extension p = ".stop" -> null_val
+      match Image.get_blason conf base p false true with
       | Some src -> Image.src_to_string src |> str_val
       | None -> null_val)
   | "blason_self" -> (
-      match Image.get_blason conf base p true with
-      | Some (`Path p) when Filename.extension p = ".stop" -> null_val
+      match Image.get_blason conf base p true true with
       | Some src -> Image.src_to_string src |> str_val
       | None -> null_val)
   | "portrait_name" -> (
@@ -4205,7 +4204,7 @@ and string_of_image_url conf base (p, p_auth) html : Adef.escaped_string =
 
 and string_of_blason_url conf base (p, p_auth) html : Adef.escaped_string =
   if p_auth then
-    match Image.get_blason conf base p false with
+    match Image.get_blason conf base p false true with
     | Some (`Path fname) ->
         (* p is not the blason owner *)
         let s = Unix.stat fname in
