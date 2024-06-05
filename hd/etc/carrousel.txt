@@ -269,10 +269,11 @@
           <span class="invisible"><i class="fas fa-retweet fa-rotate-90 fa-fw text-primary"></i></span>
           <strong><samp class="text-truncate">%portraits_store;%X;</samp></strong><samp>%nn;%if;has_blason_url;%carrousel;.url%else;%blason_name;%end;</samp>
           <a role="button" class="ml-auto col-1"  href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&fdigest=%idigest;"
-           data-toggle="tooltip" data-html="true" data-placement="left"
-           title='<i class="far fa-trash-can text-warning mr-1"></i><strong>[*delete coat of arms]</strong><br><span class="small">%blason;</span>
-                  <br><img class="rounded my-1" src="%prefix;m=FIM_C&i=%index;"
-                  width="185px">'>
+            data-toggle="tooltip" data-html="true" data-placement="left"
+            title='<i class="far fa-trash-can text-warning mr-1"></i><strong>[*delete coat of arms]</strong><br><span class="small">%blason;</span>
+                  <br><img class="rounded my-1"
+            src="%if;has_blason_url;%blason;%else;%prefix;kch=%random.bits;&m=FIM_C&i=%index;%end;"%sp;
+                 width="185px">'>
           <i class="far fa-trash-can text-warning"></i>%nn;</a> 
           <a href="%prefix;m=BLASON_UP_ONE&i=%index;" title='[*move coat of arms to father]'>
             <i class="fa-solid fa-shield text-warning"></i><i class="fa-arrow-turn-up text-warning"></i>
