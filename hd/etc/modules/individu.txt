@@ -375,16 +375,16 @@
   </ul>
 %end;
 %define;portrait()
-  %if;(has_image or b.default_image="yes")
+  %if;(has_image or has_blason or b.default_image="yes")
     <div class="d-flex align-items-center">
       %if;has_image;
-        %if;(e.cgl!="on") 
-          <a href="%image_url;" target="_blank">
-            <img src="%image_url;"%image_size; class=" %if;(op_m=3)align-self-center mx-1%end; rounded" alt="[image/images]0">%nn;
-          </a>%nn;
-        %else;
-          <img src="%image_url;"%image_size; class="%if;(op_m=3)align-self-center mx-1%end; rounded" alt="[image/images]0">%nn;
-        %end;
+        %if;not cancel_links;<a href="%image_url;" target="_blank">%end;
+          <img src="%image_url;"%image_size; class=" %if;(op_m=3)align-self-center mx-1%end; rounded" alt="[image/images]0">%nn;
+        %if;not cancel_links;</a>%end;
+      %elseif;has_blason;
+        %if;not cancel_links;<a href="%blason_url;" target="_blank">%end;
+            <img src="%blason_url;"%blason_size; class="%if;(op_m=3)align-self-center mx-1%end; rounded" alt="[coat of arms]">%nn;
+        %if;not cancel_links</a>%end;
       %elseif;(b.default_image="yes")
         <img class="%if;(op_m=3)d-flex align-self-center mx-1%end; rounded" src="%images_prefix;img_unknown_%if;(is_female)wo%elseif;(is_male)%else;u_%end;man.png"%image_size; alt="[missing image]">
       %end;
@@ -398,7 +398,12 @@
 %let;prefx;%if;(e.m="F")%prefix_set.pmod;%else;%prefix;%end;%in;
 %if;(e.m!="MOD_IND")
   <div class="col-12">
-  <h1 class="%if;(op_m=2)text-center%else;text-xs-center text-md-left%end; ml-1 ml-md-3">
+  <h1 class="%if;(op_m=2)text-center%else;text-xs-center text-md-left%end;">
+    %if;(has_portrait and has_blason) %(has_portrait is false if no portrait !!%)
+      %if;not cancel_links;<a href="%blason_url;" target="_blank">%end;
+       <img src="%blason_url;"%blason_small_size; class="%if;(op_m=3)align-self-center mx-1%end; rounded mr-1" alt="[coat of arms]0">%nn;
+      %if;not cancel_links;</a>%end;
+    %end;
     %if;has_public_name;
       %if;has_qualifiers;%public_name; <em>%qualifier;</em>
       %else;%public_name; %surname;%end;

@@ -1778,6 +1778,10 @@ sl: dodaj zapiski
 sv: lägg till noteringar
 tr: not ekle
 
+    add coat of arms
+en: add coat of arms
+fr: ajouter un blason
+
     add filter
 co: aghjunghje un filtru
 de: Filter hinzufügen
@@ -4512,6 +4516,10 @@ pt: familiar próximo
 sv: en släkting
 tr: bir ebeveyn
 
+    coat of arms
+en: coat of arms
+fr: blason
+
     coefficient of relationship
 co: U <a href="https://en.wikipedia.org/wiki/Coefficient_of_relationship">cuefficiente di e rilazioni</a> indicheghja u percentuale medianu minimu di geni spartiti trà dui individui.
 de: Der <a href="https://de.wikipedia.org/wiki/Verwandtschaftskoeffizient">Verwandtschaftskoeffizient</a> berechnet den minimalen Prozentsatz der Übereinstimmung der DNA zwischen zwei Personen.
@@ -6806,6 +6814,14 @@ sk: zmazať
 sl: izbriši
 sv: ta bort
 tr: sil
+
+    delete coat of arms
+en: delete coat of arms
+fr: supprimer le blason
+
+    delete coat of arms saved
+en: delete saved coat of arms
+fr: supprimer le blason sauvegardé
 
     delete image
 co: squassà a fiura
@@ -12042,6 +12058,10 @@ sl: spremeni
 sv: ändra
 tr: güncelleme
 
+    modify coat of arms
+en: modify coat of arms
+fr: modifier le blason
+
     modify family %s event order
 co: intervertisce l’evenimenti di a famiglia %s
 de: vertauschen Sie die Ereignisse der Familie %s
@@ -12219,6 +12239,10 @@ sk: viac ako %d odpovedí
 sl: več kot %d zadetkov
 sv: fler än %d svar
 tr: %d cevaptan daha fazla
+
+    move coat of arms to father
+fr: Déplacer le blason vers le père
+en: move coat of arms to father
 
     move union comments to notes
 en: transfer the historical “comments of union” input to the adjacent “marriage notes” one.
@@ -14503,6 +14527,10 @@ de: vorher
 en: previous
 fr: précédent
 
+    previous coat of arms
+en: a possible previous version of the saved coat of arms will be deleted.
+fr: une sauvegarde pré-existante du blason sera supprimée.
+
     previous image
 co: s’è una fiura cù u listessu nome esiste dighjà in u cartulare di salvaguardia, sta fiura serà squassata.
 de: wenn schon ein gespeichertes Bild mit dem gleichen Namen existiert, wird es gelöscht.
@@ -15193,6 +15221,10 @@ de: wiederherstellen
 en: restore
 fr: restaurer
 
+    restore coat of arms saved
+en: restore coat of arms
+fr: restaurer le blason
+
     restore image saved
 co: risturà una fiura arregistrata
 de: das gespeicherte Bild wiederherstellen
@@ -15627,6 +15659,10 @@ pt: ver fotos
 ru: смотри изображения предков
 sv: se bilder
 tr: resimleri görüntüle
+
+    see coat of arms
+en: see coat of arms
+fr: voir le blason
 
     see descendants notes/sources
 co: fighjà e note è e fonte
@@ -16716,6 +16752,10 @@ sl: medtem ko ostajaš na tem orodju
 sv: medan du stannar på detta verktyg
 tr: bu araç üzerinde kalırken
 zh: 在此工具上停留时
+
+    stops to use coat of arms of
+fr: à arrêter d'utiliser le blason de
+en: stops to use coat of arms of
 
     store image
 co: a fiura selezziunata serà piazzata in
@@ -18939,6 +18979,10 @@ sk: použi "spojenie" namiesto "vytvorenia"
 sl: uporabite "povezava" namesto "ustvari"
 sv: använd "länk" istället för "skapa"
 tr: "oluştur" yerine "bağlantı" kullanın
+
+    use coat of arms of
+fr: utilise le blason de
+en: use coat of arms of
 
     user and language variables
 af: gebruiker- en taalveranderlikes
