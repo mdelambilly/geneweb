@@ -220,14 +220,7 @@ let find_sosa_ref conf =
   let nz = get_env "nz" env in
   let ocz = get_env "ocz" env in
   let iz = get_env "iz" env in
-  match (iz, pz, nz, ocz) with
-  | iz, "", "", "" when iz <> "" -> iz
-  | "", pz, nz, ocz when pz <> "" || nz <> "" ->
-      Format.sprintf "%s.%s %s" pz ocz nz
-  | _ -> (
-      match List.assoc_opt "sosa_ref" conf.base_env with
-      | Some s when s <> "" -> s
-      | _ -> "No sosa ref")
+  (iz, pz, nz, ocz)
 
 (* url_set_aux can reset several evar from evar_l in one call *)
 let url_set_aux conf evar_l str_l =
@@ -379,6 +372,7 @@ let rec eval_variable conf = function
       with Failure _ | Invalid_argument _ -> raise Not_found)
   | "nb_persons" :: sl -> eval_int conf conf.nb_of_persons sl
   | "nb_families" :: sl -> eval_int conf conf.nb_of_families sl
+  | "sosa_ref" :: sl -> eval_sosa_ref conf sl
   | [ "substr_start"; n; v ] -> (
       (* extract the n first characters of string v *)
       match int_of_string_opt n with
@@ -409,6 +403,23 @@ let rec eval_variable conf = function
   | [ "user"; "key" ] -> conf.userkey
   | [ s ] -> eval_simple_variable conf s
   | _ -> raise Not_found
+
+and eval_sosa_ref conf sl =
+  let i, fn, sn, occ = find_sosa_ref conf in
+  match sl with
+  | [ "first_name" ] -> fn
+  | [ "surname" ] -> sn
+  | [ "occ" ] -> occ
+  | [ "index" ] -> i
+  | [ "access" ] ->
+      if i <> "" then "i=" ^ i
+      else if fn <> "" || sn <> "" then
+        Format.sprintf "p=%s&n=%s&oc=%s" fn sn occ
+      else ""
+  | [] ->
+      let occ = if occ = "" then "" else "." ^ occ in
+      Format.sprintf "%s%s %s" fn occ sn
+  | _ -> "???1"
 
 and eval_int conf n = function
   | [ "hexa" ] -> Printf.sprintf "0x%X" n
@@ -482,7 +493,7 @@ and eval_simple_variable conf = function
   | "nn" -> ""
   | "plugins" ->
       let l = List.map Filename.basename conf.plugins in
-      String.concat "," l
+      String.concat ", " l
   | "bname" -> conf.bname
   | "token" -> conf.cgi_passwd
   | "bname_token" -> String.concat "_" [ conf.bname; conf.cgi_passwd ]
@@ -499,7 +510,13 @@ and eval_simple_variable conf = function
       (Util.commd ~excl:[ "templ"; "p_mod"; "wide" ] conf :> string)
   | "referer" -> (Util.get_referer conf :> string)
   | "right" -> conf.right
-  | "sosa_ref" -> find_sosa_ref conf
+  | "sosa_ref" -> (
+      match find_sosa_ref conf with
+      | iz, _, _, _ when iz <> "" -> iz
+      | _, fn, sn, occ when fn <> "" || sn <> "" ->
+          let occ = if occ = "" then "" else "." ^ occ in
+          Format.sprintf "%s%s %s" fn occ sn
+      | _ -> "???2")
   | "setup_link" -> if conf.setup_link then " - " ^ setup_link conf else ""
   | "sp" -> " "
   | "static_path" | "etc_prefix" ->
@@ -763,7 +780,13 @@ let templ_eval_var conf = function
   | [ "friend" ] -> VVbool conf.friend
   | [ "manitou" ] -> VVbool conf.manitou
   | [ "plugin"; plugin ] ->
-      VVbool (List.mem plugin (List.map Filename.basename conf.plugins))
+      let plugins =
+        try
+          List.assoc "plugins" conf.base_env
+          |> String.split_on_char ',' |> List.map String.trim
+        with Not_found -> []
+      in
+      VVbool (List.mem plugin plugins)
   | [ "supervisor" ] -> VVbool conf.supervisor
   | [ "true" ] -> VVbool true
   | [ "wizard" ] -> VVbool conf.wizard
@@ -1209,6 +1232,10 @@ let rec interp_ast :
         | "nth_c", [ VVstring s1; VVstring s2 ] -> (
             let n = try int_of_string s2 with Failure _ -> 0 in
             try Char.escaped (String.get s1 n) with Invalid_argument _ -> "")
+        | "1000sep", [ VVstring s ] ->
+            let n = try int_of_string s with Failure _ -> 0 in
+            let sep = Util.transl conf "(thousand separator)" in
+            string_of_expr_val (VVstring (Mutil.string_of_int_sep sep n))
         | "red_of_hsv", [ VVstring h; VVstring s; VVstring v ] -> (
             try
               let r, _, _ = rgb_of_str_hsv h s v in
