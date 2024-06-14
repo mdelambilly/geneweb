@@ -1,8 +1,7 @@
 open Config
 open Gwdb
 
-let path_str path =
-  match path with Some (`Path pa) -> pa | Some (`Url u) -> u | None -> ""
+let path_str path = match path with Some (`Path pa) -> pa | None -> ""
 
 let get_dir_name mode bname =
   match mode with
@@ -58,8 +57,10 @@ let full_image_path mode conf base p =
   let f = Filename.concat (portrait_folder conf) s in
   match find_img_opt f with
   | Some (`Path _) as full_path -> full_path
-  | Some (`Url _) as full_url -> full_url
-  | None -> None
+  | Some (`Url _)
+  (* should not happen, there is only ".url" file in carrousel folder *)
+  | None ->
+      None
 
 let source_filename conf src =
   let fname1 = Filename.concat (carrousel_folder conf) src in
@@ -212,17 +213,11 @@ let get_portrait_path conf base p =
     full_image_path "portraits" conf base p
   else None
 
-let is_url str =
-  if
-    Mutil.start_with "http" 0 str
-    || Mutil.start_with "https" 0 str
-    || Mutil.start_with "file" 0 str
-  then true
-  else false
-
 (* parse a string to an `Url or a `Path *)
 let urlorpath_of_string conf s =
-  if is_url s then `Url s
+  let http = "http://" in
+  let https = "https://" in
+  if Mutil.start_with http 0 s || Mutil.start_with https 0 s then `Url s
   else if Filename.is_implicit s then
     match List.assoc_opt "images_path" conf.base_env with
     | Some p when p <> "" -> `Path (Filename.concat p s)
@@ -254,7 +249,9 @@ let parse_src_with_size_info conf s =
 
 let get_portrait conf base p =
   if has_access_to_image "portraits" conf base p then
-    match src_of_string conf (sou base (get_image p)) with
+    match
+      src_of_string conf (sou base (get_image p))
+    with
     | `Src_with_size_info _s as s_info -> (
         match parse_src_with_size_info conf s_info with
         | Error _e -> None
@@ -265,19 +262,18 @@ let get_portrait conf base p =
   else None
 
 (* if self = true, then do not loop for fathers *)
-let get_blason conf base p self stop =
+let get_blason conf base p self =
   if has_access_to_image "blasons" conf base p then
     let rec loop p =
       match
         src_of_string conf (path_str (full_image_path "blasons" conf base p))
       with
-      | `Src_with_size_info s when stop && Filename.extension s = ".stop" ->
-          None
+      | `Src_with_size_info s when Filename.extension s = ".stop" -> None
       | `Src_with_size_info _s as s_info -> (
           match parse_src_with_size_info conf s_info with
           | Error _e -> None
           | Ok (s, _size) -> Some s)
-      | `Path p when stop && Filename.extension p = ".stop" -> None
+      | `Path p when Filename.extension p = ".stop" -> None
       | `Path p -> Some (`Path p)
       | `Url u -> Some (`Url u)
       | `Empty -> (
@@ -292,19 +288,20 @@ let get_blason conf base p self stop =
   else None
 
 let get_blason_name conf base p self =
-  match get_blason conf base p self true with
+  match get_blason conf base p self with
   | Some (`Path p) -> Filename.basename p
   | Some (`Url u) -> u
   | None -> ""
 
 let has_blason conf base p self =
-  match get_blason conf base p self true with
+  match get_blason conf base p self with
   | None -> false
+  | Some (`Path p) when Filename.extension p = ".stop" -> false
   | Some (`Path _p) -> true
   | Some (`Url _u) -> true
 
 let has_blason_stop conf base p =
-  match get_blason conf base p true false with
+  match get_blason conf base p true with
   | None -> false
   | Some (`Path p) when Filename.extension p = ".stop" -> true
   | Some (`Path _p) -> false
@@ -318,8 +315,7 @@ let get_blason_owner conf base p =
           let cpl = foi base ifam in
           let fa_iper = get_father cpl in
           let fa = poi base fa_iper in
-          if get_blason conf base fa true true <> None then Some fa_iper
-          else loop fa
+          if get_blason conf base fa true <> None then Some fa_iper else loop fa
       | _ -> None
     in
     loop p
@@ -333,7 +329,7 @@ let get_old_portrait_or_blason conf base mode p =
   if has_access_to_image mode conf base p then
     let key = default_image_filename mode base p in
     let f =
-      Filename.concat (Filename.concat (portrait_folder conf) "saved") key
+      Filename.concat (Filename.concat (portrait_folder conf) "old") key
     in
     find_img_opt f
   else None
@@ -341,7 +337,7 @@ let get_old_portrait_or_blason conf base mode p =
 let rename_portrait_or_blason conf base mode p (nfn, nsn, noc) =
   match
     if mode = "portraits" then get_portrait conf base p
-    else get_blason conf base p true true
+    else get_blason conf base p true
   with
   | Some (`Path old_f) -> (
       let new_s = default_image_filename_of_key mode nfn nsn noc in
@@ -356,10 +352,10 @@ let rename_portrait_or_blason conf base mode p (nfn, nsn, noc) =
               "Error renaming portrait/blasons: old_path=%s new_path=%s : %s"
               old_f new_f e));
       let new_s_f =
-        String.concat Filename.dir_sep [ portrait_folder conf; "saved"; new_s ]
+        String.concat Filename.dir_sep [ portrait_folder conf; "old"; new_s ]
       in
       let old_s_f =
-        String.concat Filename.dir_sep [ portrait_folder conf; "saved"; old_s ]
+        String.concat Filename.dir_sep [ portrait_folder conf; "old"; old_s ]
       in
       (if Sys.file_exists (old_s_f ^ old_ext) then
        try Sys.rename (old_s_f ^ old_ext) (new_s_f ^ old_ext)
@@ -391,7 +387,9 @@ let rename_portrait_and_blason conf base p (nfn, nsn, noc) =
 
 let get_portrait_with_size conf base p =
   if has_access_to_image "portraits" conf base p then
-    match src_of_string conf (sou base (get_image p)) with
+    match
+      src_of_string conf (sou base (get_image p))
+    with
     | `Src_with_size_info _s as s_info -> (
         match parse_src_with_size_info conf s_info with
         | Error _e -> None
@@ -401,12 +399,10 @@ let get_portrait_with_size conf base p =
         if Sys.file_exists p then
           Some (path, size_from_path path |> Result.to_option)
         else None
-    | `Empty ->
-        Some
-          ( (match full_image_path "portraits" conf base p with
-            | Some s -> s
-            | None -> `Path ""),
-            None )
+    | `Empty -> (
+        match full_image_path "portraits" conf base p with
+        | Some path -> Some (path, size_from_path path |> Result.to_option)
+        | None -> None)
   else None
 
 let get_blason_with_size conf base p self =
@@ -430,12 +426,10 @@ let get_blason_with_size conf base p self =
               let cpl = foi base ifam in
               let fa = poi base (get_father cpl) in
               loop fa
-          | _ ->
-              Some
-                ( (match full_image_path "blasons" conf base p with
-                  | Some s -> s
-                  | None -> `Path ""),
-                  None ))
+          | _ -> (
+              match full_image_path "blasons" conf base p with
+              | Some path -> Some (path, size_from_path path |> Result.to_option)
+              | None -> None))
     in
     loop p
   else None
@@ -445,7 +439,7 @@ let get_blason_with_size conf base p self =
 let carrousel_file_path conf base p fname old =
   let dir =
     let dir = default_image_filename "portraits" base p in
-    if old then Filename.concat dir "saved" else dir
+    if old then Filename.concat dir "old" else dir
   in
   String.concat Filename.dir_sep
     ([ carrousel_folder conf; dir ] @ if fname = "" then [] else [ fname ])

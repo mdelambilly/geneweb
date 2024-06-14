@@ -9,7 +9,7 @@ val get_dir_name : string -> string -> string
 val src_of_string :
   config ->
   string ->
-  [ `Src_with_size_info of string | `Path of string | `Url of string | `Empty ]
+  [ `Src_with_size_info of string | `Path of string | `Url of string | `Empty]
 
 val scale_to_fit : max_w:int -> max_h:int -> w:int -> h:int -> int * int
 (** [scale_to_fit ~max_w ~max_h ~w ~h] is the {(width, height)} of a proportionally scaled {(w, h)} rectangle so it can fit in a {(max_w, max_h)} rectangle *)
@@ -46,8 +46,7 @@ val src_to_string : [< `Path of string | `Url of string ] -> string
 (** [src_to_string src] is [src] as a string *)
 
 (* TODO this should be removed *)
-val get_portrait_path :
-  config -> base -> person -> [> `Path of string | `Url of string ] option
+val get_portrait_path : config -> base -> person -> [> `Path of string ] option
 (** [get_portrait_path conf base p] is
     - [None] if we don't have access to [p]'s portrait or it doesn't exist.
     - [Some path] with [path] the full path with extension of [p]'s portrait.
@@ -100,9 +99,6 @@ val get_blason :
   base ->
   person ->
   bool ->
-  (* if true self *)
-  bool ->
-  (* if true dont return xx.blason.stop *)
   [> `Path of string | `Url of string ] option
 (** [get_portrait conf base p] is
     - [None] if we don't have access to [p]'s portrait or it doesn't exist.

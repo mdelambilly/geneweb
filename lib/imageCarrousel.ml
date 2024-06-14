@@ -71,7 +71,7 @@ let raw_get conf key =
 
 let insert_saved fname =
   let l = String.split_on_char Filename.dir_sep.[0] fname |> List.rev in
-  let l = List.rev @@ match l with h :: t -> h :: "saved" :: t | _ -> l in
+  let l = List.rev @@ match l with h :: t -> h :: "old" :: t | _ -> l in
   String.concat Filename.dir_sep l
 
 let write_file fname content =
@@ -82,7 +82,7 @@ let write_file fname content =
 
 let move_file_to_save dir file =
   try
-    let save_dir = Filename.concat dir "saved" in
+    let save_dir = Filename.concat dir "old" in
     if not (Sys.file_exists save_dir) then Mutil.mkdir_p save_dir;
     let fname = Filename.basename file in
     let orig_file = Filename.concat dir fname in
@@ -186,7 +186,7 @@ let dump_bad_image conf s =
 
 let swap_files_aux dir file ext old_ext =
   let old_file =
-    String.concat Filename.dir_sep [ dir; "saved"; Filename.basename file ]
+    String.concat Filename.dir_sep [ dir; "old"; Filename.basename file ]
   in
   let tmp_file = String.concat Filename.dir_sep [ dir; "tempfile.tmp" ] in
   if ext <> old_ext then (
@@ -223,7 +223,7 @@ let get_extension conf saved fname =
   let f =
     if saved then
       String.concat Filename.dir_sep
-        [ Util.base_path [ "images" ] conf.bname; "saved"; fname ]
+        [ Util.base_path [ "images" ] conf.bname; "old"; fname ]
     else
       String.concat Filename.dir_sep
         [ Util.base_path [ "images" ] conf.bname; fname ]
@@ -331,7 +331,7 @@ let print_send_image conf base p =
 
 let print_send_blason conf base p =
   let title h =
-    if Option.is_some @@ Image.get_blason conf base p true true then
+    if Option.is_some @@ Image.get_blason conf base p true then
       transl_nth conf "image/images" 0
       |> transl_decline conf "modify"
       |> Utf8.capitalize_fst |> Output.print_sstring conf
@@ -587,7 +587,7 @@ let effective_send_c_ok ?(portrait = true) conf base p file file_name =
   if mode = "portraits" then
     match
       if portrait then Image.get_portrait conf base p
-      else Image.get_blason conf base p true true
+      else Image.get_blason conf base p true
     with
     | Some (`Path portrait) ->
         if move_file_to_save dir portrait = 0 then
@@ -597,7 +597,7 @@ let effective_send_c_ok ?(portrait = true) conf base p file file_name =
           if portrait then Image.default_image_filename "portraits" base p
           else Image.default_image_filename "blasons" base p
         in
-        let dir = Filename.concat dir "saved" in
+        let dir = Filename.concat dir "old" in
         if not (Sys.file_exists dir) then Mutil.mkdir_p dir;
         let fname = Filename.concat dir fname ^ ".url" in
         try write_file fname url
@@ -736,7 +736,9 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
   let keydir = Image.default_image_filename "portraits" base p in
   let fname =
     if portrait then
-      match Image.src_of_string conf (sou base (get_image p)) with
+      match
+        Image.src_of_string conf (sou base (get_image p))
+      with
       | `Src_with_size_info _s as s_info -> (
           match Image.parse_src_with_size_info conf s_info with
           | Error _e -> ""
@@ -759,8 +761,7 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
   if not (Sys.file_exists dir) then Mutil.mkdir_p dir;
   (* TODO verify we dont destroy a saved image
       having the same name as portrait! *)
-  if delete then
-    Mutil.rm (String.concat Filename.dir_sep [ dir; "saved"; file ])
+  if delete then Mutil.rm (String.concat Filename.dir_sep [ dir; "old"; file ])
   else if move_file_to_save dir file = 0 then incorrect conf "effective delete";
   let changed =
     U_Delete_image (Util.string_gen_person base (gen_person_of_person p))
@@ -770,24 +771,9 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
   file_name
 
 let effective_copy_portrait_to_blason conf base p =
-  let create_url_file keydir url =
-    let fname = Util.base_path [ "images"; conf.bname ] keydir ^ ".url" in
-    let oc = Secure.open_out_bin fname in
-    output_string oc url;
-    flush oc;
-    close_out oc;
-    fname
-  in
   let dir = Util.base_path [ "images" ] conf.bname in
-  let fname, url =
-    match Image.src_of_string conf (sou base (get_image p)) with
-    | `Url u ->
-        ( create_url_file (Image.default_image_filename "portraits" base p) u,
-          true )
-    | `Empty -> ("", false)
-    | _ -> (Image.default_image_filename "portraits" base p, false)
-  in
-  let ext = if url then ".url" else get_extension conf false fname in
+  let fname = Image.default_image_filename "portraits" base p in
+  let ext = get_extension conf false fname in
   let blason_filename =
     String.concat Filename.dir_sep
       [ dir; Image.default_image_filename "blasons" base p ^ ext ]
@@ -799,10 +785,9 @@ let effective_copy_portrait_to_blason conf base p =
     else "OK")
     <> ""
   in
-  let portrait_filename = fname in
+  let portrait_filename = String.concat Filename.dir_sep [ dir; fname ^ ext ] in
+  file_copy portrait_filename blason_filename;
   let _ = effective_delete_c_ok ~portrait:true conf base p in
-  rn portrait_filename blason_filename;
-
   History.record conf base
     (U_Send_image (Util.string_gen_person base (gen_person_of_person p)))
     "ca";
@@ -845,7 +830,7 @@ let effective_reset_c_ok ?(portrait = true) conf base p =
   else
     match
       if portrait then Image.get_portrait conf base p
-      else Image.get_blason conf base p true true
+      else Image.get_blason conf base p true
     with
     | Some (`Url url) -> (
         try write_file file_in_new url
@@ -1018,7 +1003,7 @@ let print_c ?(saved = false) ?(portrait = true) conf base =
       match
         if saved then Image.get_old_portrait_or_blason conf base "portraits" p
         else if mode = "portraits" then Image.get_portrait conf base p
-        else Image.get_blason conf base p false true
+        else Image.get_blason conf base p false
       with
       | Some (`Path f) ->
           Result.fold ~ok:ignore

@@ -126,7 +126,7 @@ let print_portrait conf base p =
     [Retour] : aucun
     [Rem] : Ne pas utiliser en dehors de ce module.                           *)
 let print_blason_aux conf base p =
-  match Image.get_blason conf base p false true with
+  match Image.get_blason conf base p false with
   | Some (`Path path) ->
       Result.fold ~ok:ignore
         ~error:(fun _ -> Hutil.incorrect_request conf)
