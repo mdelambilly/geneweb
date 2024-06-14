@@ -329,7 +329,7 @@ let get_old_portrait_or_blason conf base mode p =
   if has_access_to_image mode conf base p then
     let key = default_image_filename mode base p in
     let f =
-      Filename.concat (Filename.concat (portrait_folder conf) "old") key
+      Filename.concat (Filename.concat (portrait_folder conf) "saved") key
     in
     find_img_opt f
   else None
@@ -352,10 +352,10 @@ let rename_portrait_or_blason conf base mode p (nfn, nsn, noc) =
               "Error renaming portrait/blasons: old_path=%s new_path=%s : %s"
               old_f new_f e));
       let new_s_f =
-        String.concat Filename.dir_sep [ portrait_folder conf; "old"; new_s ]
+        String.concat Filename.dir_sep [ portrait_folder conf; "saved"; new_s ]
       in
       let old_s_f =
-        String.concat Filename.dir_sep [ portrait_folder conf; "old"; old_s ]
+        String.concat Filename.dir_sep [ portrait_folder conf; "saved"; old_s ]
       in
       (if Sys.file_exists (old_s_f ^ old_ext) then
        try Sys.rename (old_s_f ^ old_ext) (new_s_f ^ old_ext)
@@ -439,7 +439,7 @@ let get_blason_with_size conf base p self =
 let carrousel_file_path conf base p fname old =
   let dir =
     let dir = default_image_filename "portraits" base p in
-    if old then Filename.concat dir "old" else dir
+    if old then Filename.concat dir "saved" else dir
   in
   String.concat Filename.dir_sep
     ([ carrousel_folder conf; dir ] @ if fname = "" then [] else [ fname ])

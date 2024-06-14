@@ -71,7 +71,7 @@ let raw_get conf key =
 
 let insert_saved fname =
   let l = String.split_on_char Filename.dir_sep.[0] fname |> List.rev in
-  let l = List.rev @@ match l with h :: t -> h :: "old" :: t | _ -> l in
+  let l = List.rev @@ match l with h :: t -> h :: "saved" :: t | _ -> l in
   String.concat Filename.dir_sep l
 
 let write_file fname content =
@@ -82,7 +82,7 @@ let write_file fname content =
 
 let move_file_to_save dir file =
   try
-    let save_dir = Filename.concat dir "old" in
+    let save_dir = Filename.concat dir "saved" in
     if not (Sys.file_exists save_dir) then Mutil.mkdir_p save_dir;
     let fname = Filename.basename file in
     let orig_file = Filename.concat dir fname in
@@ -186,7 +186,7 @@ let dump_bad_image conf s =
 
 let swap_files_aux dir file ext old_ext =
   let old_file =
-    String.concat Filename.dir_sep [ dir; "old"; Filename.basename file ]
+    String.concat Filename.dir_sep [ dir; "saved"; Filename.basename file ]
   in
   let tmp_file = String.concat Filename.dir_sep [ dir; "tempfile.tmp" ] in
   if ext <> old_ext then (
@@ -223,7 +223,7 @@ let get_extension conf saved fname =
   let f =
     if saved then
       String.concat Filename.dir_sep
-        [ Util.base_path [ "images" ] conf.bname; "old"; fname ]
+        [ Util.base_path [ "images" ] conf.bname; "saved"; fname ]
     else
       String.concat Filename.dir_sep
         [ Util.base_path [ "images" ] conf.bname; fname ]
@@ -597,7 +597,7 @@ let effective_send_c_ok ?(portrait = true) conf base p file file_name =
           if portrait then Image.default_image_filename "portraits" base p
           else Image.default_image_filename "blasons" base p
         in
-        let dir = Filename.concat dir "old" in
+        let dir = Filename.concat dir "saved" in
         if not (Sys.file_exists dir) then Mutil.mkdir_p dir;
         let fname = Filename.concat dir fname ^ ".url" in
         try write_file fname url
@@ -761,7 +761,7 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
   if not (Sys.file_exists dir) then Mutil.mkdir_p dir;
   (* TODO verify we dont destroy a saved image
       having the same name as portrait! *)
-  if delete then Mutil.rm (String.concat Filename.dir_sep [ dir; "old"; file ])
+  if delete then Mutil.rm (String.concat Filename.dir_sep [ dir; "saved"; file ])
   else if move_file_to_save dir file = 0 then incorrect conf "effective delete";
   let changed =
     U_Delete_image (Util.string_gen_person base (gen_person_of_person p))
