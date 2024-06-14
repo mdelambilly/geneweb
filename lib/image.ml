@@ -1,7 +1,8 @@
 open Config
 open Gwdb
 
-let path_str path = match path with Some (`Path pa) -> pa | None -> ""
+let path_str path =
+  match path with Some (`Path pa) -> pa | Some (`Url u) -> u | None -> ""
 
 let get_dir_name mode bname =
   match mode with
@@ -57,10 +58,8 @@ let full_image_path mode conf base p =
   let f = Filename.concat (portrait_folder conf) s in
   match find_img_opt f with
   | Some (`Path _) as full_path -> full_path
-  | Some (`Url _)
-  (* should not happen, there is only ".url" file in carrousel folder *)
-  | None ->
-      None
+  | Some (`Url _) as full_url -> full_url
+  | None -> None
 
 let source_filename conf src =
   let fname1 = Filename.concat (carrousel_folder conf) src in
@@ -147,7 +146,6 @@ let jpeg_size ic =
 
 let size_from_path fname =
   (* TODO: size and mime type should be in db *)
-  let (`Path fname) = fname in
   let res =
     if fname = "" then Error ()
     else
@@ -213,11 +211,18 @@ let get_portrait_path conf base p =
     full_image_path "portraits" conf base p
   else None
 
+let is_url str =
+  if
+    Mutil.start_with "http" 0 str
+    || Mutil.start_with "https" 0 str
+    || Mutil.start_with "file" 0 str
+  then true
+  else false
+
+
 (* parse a string to an `Url or a `Path *)
 let urlorpath_of_string conf s =
-  let http = "http://" in
-  let https = "https://" in
-  if Mutil.start_with http 0 s || Mutil.start_with https 0 s then `Url s
+  if is_url s then `Url s
   else if Filename.is_implicit s then
     match List.assoc_opt "images_path" conf.base_env with
     | Some p when p <> "" -> `Path (Filename.concat p s)
@@ -397,11 +402,14 @@ let get_portrait_with_size conf base p =
     | `Url _s as url -> Some (url, None)
     | `Path p as path ->
         if Sys.file_exists p then
-          Some (path, size_from_path path |> Result.to_option)
+          Some (path, size_from_path p |> Result.to_option)
         else None
     | `Empty -> (
         match full_image_path "portraits" conf base p with
-        | Some path -> Some (path, size_from_path path |> Result.to_option)
+        | Some (`Path p) ->
+            Some (`Path p, size_from_path p |> Result.to_option)
+        | Some (`Url u) ->
+            Some (`Url u, None)
         | None -> None)
   else None
 
@@ -418,7 +426,7 @@ let get_blason_with_size conf base p self =
       | `Url _s as url -> Some (url, None)
       | `Path p as path ->
           if Sys.file_exists p then
-            Some (path, size_from_path path |> Result.to_option)
+            Some (path, size_from_path p |> Result.to_option)
           else None
       | `Empty -> (
           match get_parents p with
@@ -428,7 +436,10 @@ let get_blason_with_size conf base p self =
               loop fa
           | _ -> (
               match full_image_path "blasons" conf base p with
-              | Some path -> Some (path, size_from_path path |> Result.to_option)
+              | Some (`Path p) ->
+                  Some (`Path p, size_from_path p |> Result.to_option)
+              | Some (`Url u) ->
+                  Some (`Url u, None)
               | None -> None))
     in
     loop p

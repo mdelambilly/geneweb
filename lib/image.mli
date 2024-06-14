@@ -28,7 +28,7 @@ val default_image_filename : string -> base -> person -> string
  e.g: default_image_filename "Jean Claude" "DUPOND" 3 is "jean_claude.3.dupond" or "jean_claude.3.dupond.blason"
  *)
 
-val size_from_path : [ `Path of string ] -> (int * int, unit) result
+val size_from_path : string -> (int * int, unit) result
 (** [size_from_path path]
     - Error () if failed to read or parse file
     - Ok (width, height) of the file.
@@ -46,7 +46,8 @@ val src_to_string : [< `Path of string | `Url of string ] -> string
 (** [src_to_string src] is [src] as a string *)
 
 (* TODO this should be removed *)
-val get_portrait_path : config -> base -> person -> [> `Path of string ] option
+val get_portrait_path :
+  config -> base -> person -> [> `Path of string | `Url of string ] option
 (** [get_portrait_path conf base p] is
     - [None] if we don't have access to [p]'s portrait or it doesn't exist.
     - [Some path] with [path] the full path with extension of [p]'s portrait.

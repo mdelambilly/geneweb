@@ -771,9 +771,24 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
   file_name
 
 let effective_copy_portrait_to_blason conf base p =
+  let create_url_file keydir url =
+    let fname = Util.base_path [ "images"; conf.bname ] keydir ^ ".url" in
+    let oc = Secure.open_out_bin fname in
+    output_string oc url;
+    flush oc;
+    close_out oc;
+    fname
+  in
   let dir = Util.base_path [ "images" ] conf.bname in
-  let fname = Image.default_image_filename "portraits" base p in
-  let ext = get_extension conf false fname in
+  let fname, url =
+    match Image.src_of_string conf (sou base (get_image p)) with
+    | `Url u ->
+        ( create_url_file (Image.default_image_filename "portraits" base p) u,
+          true )
+    | `Empty -> ("", false)
+    | _ -> (Image.default_image_filename "portraits" base p, false)
+  in
+  let ext = if url then ".url" else get_extension conf false fname in
   let blason_filename =
     String.concat Filename.dir_sep
       [ dir; Image.default_image_filename "blasons" base p ^ ext ]
@@ -785,8 +800,8 @@ let effective_copy_portrait_to_blason conf base p =
     else "OK")
     <> ""
   in
-  let portrait_filename = String.concat Filename.dir_sep [ dir; fname ^ ext ] in
-  file_copy portrait_filename blason_filename;
+  let portrait_filename = fname in
+  rn portrait_filename blason_filename;
   let _ = effective_delete_c_ok ~portrait:true conf base p in
   History.record conf base
     (U_Send_image (Util.string_gen_person base (gen_person_of_person p)))
