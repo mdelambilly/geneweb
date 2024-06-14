@@ -1284,8 +1284,7 @@ let gen_string_of_fimg_sz max_w max_h conf base (p, p_auth) =
     | Some (_, Some (w, h)) ->
         let w, h = Image.scale_to_fit ~max_w ~max_h ~w ~h in
         Format.sprintf " width=\"%d\" height=\"%d\"" w h
-    | Some (_, None) -> Format.sprintf " height=\"%d\"" max_h
-    | None -> ""
+    | Some (_, None) | None -> Format.sprintf " height=\"%d\"" max_h
   else ""
 
 let string_of_image_size = gen_string_of_img_sz max_im_wid max_im_wid

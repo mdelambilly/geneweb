@@ -215,7 +215,7 @@
     <ul class="pl-4 py-0%if;(wizard and not cancel_links) fa-ul ml-0%end; mb-0">
     <table><tr><td>
     %if;not (wizard and not cancel_links)%apply;li_SD("spouse")%else;<li><span class="fa-li">%apply;marr_wrench_to_bullet("spouse")</span>%end;
-    %if;(spouse.has_blason and spouse.has_portrait)<img src="%spouse.blason_url;"%blason_small_size; class="%if;(op_m=3)align-self-center mx-1%end; rounded" alt="[image/images]0">%end;
+    %if;(spouse.has_blason and spouse.has_portrait)<img src="%spouse.blason_url;" %blason_small_size; class="%if;(op_m=3)align-self-center mx-1%end; rounded" alt="[image/images]0">%end;
     </td><td width="10"></td><td>
     <span %apply;getvar%with;ns[marriage event]%count;%end;>%apply;married_to("self", 1)</span>%sp;
     %apply;short_display_person("spouse")

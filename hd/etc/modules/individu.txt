@@ -399,7 +399,7 @@
 %if;(e.m!="MOD_IND")
   <div class="col-12">
   <h1 class="%if;(op_m=2)text-center%else;text-xs-center text-md-left%end;">
-    %if;(has_portrait and has_blason) %(has_portrait is false if no portrait !!%)
+    %if;(has_blason) %(has_portrait is false if no portrait !!%)
       %if;not cancel_links;<a href="%blason_url;" target="_blank">%end;
        <img src="%blason_url;"%blason_small_size; class="%if;(op_m=3)align-self-center mx-1%end; rounded mr-1" alt="[coat of arms]0">%nn;
       %if;not cancel_links;</a>%end;
