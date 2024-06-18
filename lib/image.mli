@@ -7,6 +7,7 @@ val ext_list_1 : string array
 val ext_list_2 : string array
 val get_dir_name : string -> string -> string
 val find_file_without_ext : string -> string
+val is_url : string -> bool
 
 val src_of_string :
   config ->

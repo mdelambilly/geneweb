@@ -890,7 +890,7 @@ let effective_reset_c_ok ?(portrait = true) conf base p =
   let ext =
     match Image.get_portrait conf base p with
     | Some src ->
-        if Mutil.start_with "http" 0 (Image.src_to_string src) then ".url"
+        if Image.is_url (Image.src_to_string src) then ".url"
         else ext
     | _ -> ext
   in

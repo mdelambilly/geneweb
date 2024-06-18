@@ -3468,6 +3468,7 @@ and eval_bool_person_field conf base env (p, p_auth) = function
       if (not p_auth) && is_hide_names conf p then false
       else get_first_names_aliases p <> []
   | "has_history" -> has_history conf base p p_auth
+  (* Beware: lots of confusion between image and portrait *)
   | "has_image" | "has_portrait" ->
       Image.get_portrait conf base p |> Option.is_some
   | "has_blason" -> Image.has_blason conf base p false
@@ -3476,6 +3477,10 @@ and eval_bool_person_field conf base env (p, p_auth) = function
   | "has_image_url" | "has_portrait_url" -> (
       match Image.get_portrait conf base p with
       | Some (`Url _url) -> true
+      | _ -> false)
+  | "has_c_image_url" -> (
+      match get_env "carrousel_img" env with
+      | Vstring s -> Image.is_url s
       | _ -> false)
   | "has_old_image_url" | "has_old_portrait_url" -> (
       match Image.get_old_portrait_or_blason conf base "portraits" p with
@@ -4188,6 +4193,10 @@ and string_of_died conf p p_auth =
 and string_of_image_url conf base (p, p_auth) html : Adef.escaped_string =
   if p_auth then
     match Image.get_portrait conf base p with
+    | Some (`Path fname) when Filename.extension fname = ".url" -> (
+        match Some (Secure.open_in fname) with
+        | Some ic -> Adef.escaped (input_line ic)
+        | None -> Adef.escaped "")
     | Some (`Path fname) ->
         let s = Unix.stat fname in
         let b = acces conf base p in
