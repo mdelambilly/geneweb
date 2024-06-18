@@ -84,6 +84,7 @@ let write_file fname content =
 
 let move_file_to_save dir file =
   try
+    (* FIXME attention, le basename détruit les sous dossiers *)
     let save_dir = Filename.concat dir "saved" in
     if not (Sys.file_exists save_dir) then Mutil.mkdir_p save_dir;
     let fname = Filename.basename file in
@@ -187,6 +188,7 @@ let dump_bad_image conf s =
 (* [| ".jpg"; ".jpeg"; ".png"; ".gif" |] *)
 
 let swap_files_aux dir file ext old_ext =
+(* FIXME basename !!*)
   let old_file =
     String.concat Filename.dir_sep [ dir; "saved"; Filename.basename file ]
   in
@@ -202,6 +204,7 @@ let swap_files_aux dir file ext old_ext =
 
 let swap_files file ext old_ext =
   let dir = Filename.dirname file in
+  (* FIXME basename *)
   let fname = Filename.basename file in
   swap_files_aux dir file ext old_ext;
   let txt_file =
@@ -530,6 +533,7 @@ let effective_send_c_ok ?(portrait = true) conf base p file file_name =
           String.sub image_url 7 (String.length image_url - 7)
         else image_url
       in
+      (* FIXME basename *)
       Filename.basename f
     else image_name
   in
@@ -783,6 +787,7 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
          fname)
   in
   let dir = Filename.dirname full_file in
+  (* FIXME basename *)
   let file = Filename.basename full_file in
   if full_file = "" then incorrect conf "empty file name"
     (* if delete is on, we are talking about saved files *)

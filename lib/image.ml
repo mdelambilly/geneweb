@@ -317,14 +317,11 @@ let has_blason conf base p self =
   | Some (`Url _u) -> true
 
 let has_blason_stop conf base p =
-  if has_access_to_image "blasons" conf base p then
-    match
-      src_of_string conf (path_str (full_image_path "blasons" conf base p))
-    with
-    | `Src_with_size_info s when Filename.extension s = ".stop" -> true
-    | `Path p when Filename.extension p = ".stop" -> true
-    | _ -> false
-  else false
+  match get_blason conf base p true with
+  | None -> false
+  | Some (`Path p) when Filename.extension p = ".stop" -> true
+  | Some (`Path _p) -> false
+  | Some (`Url _u) -> false
 
 let get_blason_owner conf base p =
   if has_access_to_image "blasons" conf base p then
