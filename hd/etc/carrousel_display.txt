@@ -50,15 +50,15 @@
               <div class="carousel-item%if;(not has_portrait)active%end;">
                 %if;("http" in blason_self)
                   <a href="%blason;" target="_blank" rel="noopener">
-                    <img class="img-fluid" src="%blason;" alt="[*coat of arms] yy">
+                    <img class="img-fluid" src="%blason;" alt="[*blason/blasons]0 yy">
                   </a>
                 %else;
-                    <a href="%prefix;m=FIM&i=%index;" target="_blank" rel="noopener">
-                      <img class="img-fluid" src="%prefix;m=FIM&i=%index;" alt="[*coat of arms] xx">
-                    </a>
+                  <a href="%prefix;m=FIM&i=%index;" target="_blank" rel="noopener">
+                    <img class="img-fluid" src="%prefix;m=FIM&i=%index;" alt="[*blason/blasons] xx">
+                  </a>
                 %end;
                 <div class="position-relative d-none d-md-block">
-                  <span>[coat of arms]</span>
+                  <span>[blason/blasons]0</span>
                 </div>
               </div>
             %end;

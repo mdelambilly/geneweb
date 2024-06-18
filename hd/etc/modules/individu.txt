@@ -379,11 +379,11 @@
     <div class="d-flex align-items-center">
       %if;has_image;
         %if;not cancel_links;<a href="%image_url;" target="_blank">%end;
-          <img src="%image_url;"%image_size; class=" %if;(op_m=3)align-self-center mx-1%end; rounded" alt="[image/images]0">%nn;
+          <img src="%image_url;"%image_size; class=" %if;(op_m=3)align-self-center mx-1%end; rounded" alt="[image/images]0" title="[him/her]s">%nn;
         %if;not cancel_links;</a>%end;
       %elseif;has_blason;
         %if;not cancel_links;<a href="%blason_url;" target="_blank">%end;
-            <img src="%blason_url;"%blason_size; class="%if;(op_m=3)align-self-center mx-1%end; rounded" alt="[coat of arms]">%nn;
+            <img src="%blason_url;"%blason_size; class="%if;(op_m=3)align-self-center mx-1%end; rounded" alt="[blason/blasons]0">%nn;
         %if;not cancel_links</a>%end;
       %elseif;(b.default_image="yes")
         <img class="%if;(op_m=3)d-flex align-self-center mx-1%end; rounded" src="%images_prefix;img_unknown_%if;(is_female)wo%elseif;(is_male)%else;u_%end;man.png"%image_size; alt="[missing image]">
@@ -401,7 +401,7 @@
   <h1 class="%if;(op_m=2)text-center%else;text-xs-center text-md-left%end;">
     %if;(has_blason) %(has_portrait is false if no portrait !!%)
       %if;not cancel_links;<a href="%blason_url;" target="_blank">%end;
-       <img src="%blason_url;"%blason_small_size; class="%if;(op_m=3)align-self-center mx-1%end; rounded mr-1" alt="[coat of arms]0">%nn;
+       <img src="%blason_url;"%blason_small_size; class="%if;(op_m=3)align-self-center mx-1%end; mx-2" alt="[blason/blasons]0">%nn;
       %if;not cancel_links;</a>%end;
     %end;
     %if;has_public_name;

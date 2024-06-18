@@ -4516,9 +4516,9 @@ pt: familiar próximo
 sv: en släkting
 tr: bir ebeveyn
 
-    coat of arms
-en: coat of arms
-fr: blason
+    blason/blasons
+en: coat of arms/coats of arms
+fr: blason/blasons
 
     coefficient of relationship
 co: U <a href="https://en.wikipedia.org/wiki/Coefficient_of_relationship">cuefficiente di e rilazioni</a> indicheghja u percentuale medianu minimu di geni spartiti trà dui individui.
@@ -12249,7 +12249,7 @@ sv: fler än %d svar
 tr: %d cevaptan daha fazla
 
     move coat of arms to father
-fr: Déplacer le blason vers le père
+fr: déplacer le blason vers le père
 en: move coat of arms to father
 
     move union comments to notes
@@ -14543,7 +14543,7 @@ fr: une sauvegarde pré-existante du blason sera supprimée.
 co: s’è una fiura cù u listessu nome esiste dighjà in u cartulare di salvaguardia, sta fiura serà squassata.
 de: wenn schon ein gespeichertes Bild mit dem gleichen Namen existiert, wird es gelöscht.
 en: if an image with the same name already exists in the saved, it will be deleted.
-fr: si une image du même nom existe déjà dans le sous-répertoire de sauvegarde, elle sera supprimée.
+fr: si une image du même nom existe déjà, elle sera supprimée.
 
     previous portrait
 co: un arregistramentu precedente di u ritrattu, s’ellu esiste, serà squassatu.
@@ -18946,11 +18946,11 @@ de: hochgeladen
 en: uploaded
 fr: envoyé/envoyée
 
-    url
+    URL
 co: indirizzu web
-de: Url
-en: url
-fr: url
+de: URL
+en: URL
+fr: URL
 
     restore default_sosa_ref
 en: restore default Sosa 1
