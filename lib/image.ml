@@ -60,9 +60,7 @@ let find_file_without_ext f =
   (* file f happens to have correct extension *)
   if Array.mem ext ext_list_2 then f
   else
-    match Mutil.array_find_map exists ext_list_2 with
-    | None -> ""
-    | Some f -> f
+    match Mutil.array_find_map exists ext_list_2 with None -> "" | Some f -> f
 
 (** [full_image_path mode conf base p] is [Some path] if [p] has a portrait or a blason.
     [path] is a the full path of the file with file extension. *)
@@ -233,13 +231,12 @@ let is_url str =
   then true
   else false
 
-
 (* parse a string to an `Url or a `Path *)
 let urlorpath_of_string conf s =
   if is_url s then `Url s
   else if Filename.is_implicit s then
-  (* FIXME basename does not work with sub fodlers *)
-   let s = Filename.basename s in
+    (* FIXME basename does not work with sub fodlers *)
+    let s = Filename.basename s in
     match List.assoc_opt "images_path" conf.base_env with
     | Some p when p <> "" -> `Path (Filename.concat p s)
     | Some _ | None ->
@@ -270,9 +267,7 @@ let parse_src_with_size_info conf s =
 
 let get_portrait conf base p =
   if has_access_to_image "portraits" conf base p then
-    match
-      src_of_string conf (sou base (get_image p))
-    with
+    match src_of_string conf (sou base (get_image p)) with
     | `Src_with_size_info _s as s_info -> (
         match parse_src_with_size_info conf s_info with
         | Error _e -> None
@@ -289,18 +284,14 @@ let get_blason conf base p self =
       match
         src_of_string conf (path_str (full_image_path "blasons" conf base p))
       with
-      | `Src_with_size_info s when Filename.extension s = ".stop" -> (
-          None)
+      | `Src_with_size_info s when Filename.extension s = ".stop" -> None
       | `Src_with_size_info _s as s_info -> (
           match parse_src_with_size_info conf s_info with
           | Error _e -> None
           | Ok (s, _size) -> Some s)
-      | `Path p when Filename.extension p = ".stop" -> 
-          None
-      | `Path p -> (
-          Some (`Path p))
-      | `Url u -> (
-          Some (`Url u))
+      | `Path p when Filename.extension p = ".stop" -> None
+      | `Path p -> Some (`Path p)
+      | `Url u -> Some (`Url u)
       | `Empty -> (
           match get_parents p with
           | Some ifam when not self ->
@@ -415,9 +406,7 @@ let rename_portrait_and_blason conf base p (nfn, nsn, noc) =
 
 let get_portrait_with_size conf base p =
   if has_access_to_image "portraits" conf base p then
-    match
-      src_of_string conf (sou base (get_image p))
-    with
+    match src_of_string conf (sou base (get_image p)) with
     | `Src_with_size_info _s as s_info -> (
         match parse_src_with_size_info conf s_info with
         | Error _e -> None
@@ -429,10 +418,8 @@ let get_portrait_with_size conf base p =
         else None
     | `Empty -> (
         match full_image_path "portraits" conf base p with
-        | Some (`Path p) ->
-            Some (`Path p, size_from_path p |> Result.to_option)
-        | Some (`Url u) ->
-            Some (`Url u, None)
+        | Some (`Path p) -> Some (`Path p, size_from_path p |> Result.to_option)
+        | Some (`Url u) -> Some (`Url u, None)
         | None -> None)
   else None
 
@@ -461,8 +448,7 @@ let get_blason_with_size conf base p self =
               match full_image_path "blasons" conf base p with
               | Some (`Path p) ->
                   Some (`Path p, size_from_path p |> Result.to_option)
-              | Some (`Url u) ->
-                  Some (`Url u, None)
+              | Some (`Url u) -> Some (`Url u, None)
               | None -> None))
     in
     loop p

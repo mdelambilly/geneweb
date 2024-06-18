@@ -112,6 +112,7 @@
   %elseif;(uu = "ap")[add::person/persons]0%nn;
   %elseif;(uu = "af")[add::family/families]0%nn;
   %elseif;(uu = "cb")[copy portrait to blason]0%nn;
+  %elseif;(uu = "cd")[copy image to blason]0%nn;
   %elseif;(uu = "cn")[change children's names]%nn;
   %elseif;(uu = "co")[modify::occupation/occupations]0%nn;
   %elseif;(uu = "cp")[modify::place/places]0%nn;

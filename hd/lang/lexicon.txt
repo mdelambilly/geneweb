@@ -12122,6 +12122,14 @@ de: Porträt ändern
 en: modify the portrait
 fr: modifier le portrait
 
+    copy portrait to blason
+en: use portrait as coats of arme
+fr: utiliser le portrait comme blason
+
+    copy image to blason
+en: use image as coats of arme
+fr: utiliser l'image comme blason
+
     modify source
 co: mudificà a fonte
 de: Quelle ändern

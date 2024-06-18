@@ -6,13 +6,12 @@ val carrousel_folder : config -> string
 val ext_list_1 : string array
 val ext_list_2 : string array
 val get_dir_name : string -> string -> string
-
 val find_file_without_ext : string -> string
 
 val src_of_string :
   config ->
   string ->
-  [ `Src_with_size_info of string | `Path of string | `Url of string | `Empty]
+  [ `Src_with_size_info of string | `Path of string | `Url of string | `Empty ]
 
 val scale_to_fit : max_w:int -> max_h:int -> w:int -> h:int -> int * int
 (** [scale_to_fit ~max_w ~max_h ~w ~h] is the {(width, height)} of a proportionally scaled {(w, h)} rectangle so it can fit in a {(max_w, max_h)} rectangle *)

@@ -19,6 +19,8 @@ let file_copy input_name output_name =
   Unix.close fd_in;
   Unix.close fd_out
 
+let cp = file_copy
+
 let rn fname s =
   try if Sys.file_exists fname then Sys.rename fname s
   with Failure _ ->
@@ -215,9 +217,7 @@ let swap_files file ext old_ext =
 
 let clean_saved_portrait file =
   let file = Filename.remove_extension file in
-  Array.iter
-    (fun ext -> Mutil.rm (file ^ ext))
-    Image.ext_list_1
+  Array.iter (fun ext -> Mutil.rm (file ^ ext)) Image.ext_list_1
 
 (* TODO merge with Image.file_without_extension *)
 let get_extension conf saved fname =
@@ -523,6 +523,16 @@ let effective_send_c_ok ?(portrait = true) conf base p file file_name =
   let image_name =
     try (List.assoc "image_name" conf.env :> string) with Not_found -> ""
   in
+  let image_name =
+    if image_name = "" then
+      let f =
+        if String.length image_url > 7 then
+          String.sub image_url 7 (String.length image_url - 7)
+        else image_url
+      in
+      Filename.basename f
+    else image_name
+  in
   let note =
     match Util.p_getenv conf.env "note" with
     | Some v ->
@@ -648,11 +658,12 @@ let effective_send_c_ok ?(portrait = true) conf base p file file_name =
     | "portraits" -> "sp"
     | "blasons" -> "sb"
     | "carrousel" ->
-      if file_name <> "" && note <> Adef.safe "" && source <> Adef.safe "" then "s3"
-      else if file_name <> "" then "sf"
-      else if note <> Adef.safe "" then "so"
-      else if source <> Adef.safe "" then "ss"
-      else "sx"
+        if file_name <> "" && note <> Adef.safe "" && source <> Adef.safe ""
+        then "s3"
+        else if file_name <> "" then "sf"
+        else if note <> Adef.safe "" then "so"
+        else if source <> Adef.safe "" then "ss"
+        else "sx"
     | _ -> "s?");
   file_name
 
@@ -742,25 +753,22 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
   let fname =
     match mode with
     | "portraits" -> (
-      match
-        Image.src_of_string conf (sou base (get_image p))
-      with
-      | `Src_with_size_info _s as s_info -> (
-          match Image.parse_src_with_size_info conf s_info with
-          | Error _e -> ""
-          | Ok (s, _size) -> Image.src_to_string s)
-      | `Url u -> u
-      | `Path p -> if Sys.file_exists p then p else ""
-      | `Empty -> Image.default_image_filename "portraits" base p)
-    | "blasons" -> (
-      Image.default_image_filename "blasons" base p)
+        match Image.src_of_string conf (sou base (get_image p)) with
+        | `Src_with_size_info _s as s_info -> (
+            match Image.parse_src_with_size_info conf s_info with
+            | Error _e -> ""
+            | Ok (s, _size) -> Image.src_to_string s)
+        | `Url u -> u
+        | `Path p -> if Sys.file_exists p then p else ""
+        | `Empty -> Image.default_image_filename "portraits" base p)
+    | "blasons" -> Image.default_image_filename "blasons" base p
     | "carrousel" -> (
-      try (List.assoc "file_name" conf.env :> string) with Not_found -> "")
+        try (List.assoc "file_name" conf.env :> string) with Not_found -> "")
     | _ -> ""
   in
   let dir =
     if mode = "portraits" || mode = "blasons" then
-      Util.base_path [ "images"; ] conf.bname
+      Util.base_path [ "images" ] conf.bname
     else
       String.concat Filename.dir_sep
         [ Util.base_path [ "src" ] conf.bname; "images"; keydir ]
@@ -768,15 +776,17 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
   if not (Sys.file_exists dir) then Mutil.mkdir_p dir;
   (* TODO verify we dont destroy a saved image
       having the same name as portrait! *)
-  let full_file = Image.find_file_without_ext 
-    (Filename.concat 
-      (if delete then Filename.concat dir "saved" else dir) fname )
+  let full_file =
+    Image.find_file_without_ext
+      (Filename.concat
+         (if delete then Filename.concat dir "saved" else dir)
+         fname)
   in
   let dir = Filename.dirname full_file in
   let file = Filename.basename full_file in
   if full_file = "" then incorrect conf "empty file name"
-  (* if delete is on, we are talking about saved files *)
-  else if delete then Mutil.rm (Filename.concat dir file )
+    (* if delete is on, we are talking about saved files *)
+  else if delete then Mutil.rm (Filename.concat dir file)
   else if move_file_to_save dir file = 0 then incorrect conf "effective delete";
   let changed =
     U_Delete_image (Util.string_gen_person base (gen_person_of_person p))
@@ -786,8 +796,7 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
     | "portraits" -> "dq"
     | "blasons" -> "db"
     | "carrousel" -> "dc"
-    | _ -> "d?"
-    );
+    | _ -> "d?");
   fname
 
 let effective_copy_portrait_to_blason conf base p =
@@ -805,7 +814,6 @@ let effective_copy_portrait_to_blason conf base p =
     | `Url u ->
         ( create_url_file (Image.default_image_filename "portraits" base p) u,
           true )
-    | `Empty -> ("", false)
     | _ -> (Image.default_image_filename "portraits" base p, false)
   in
   let ext = if url then ".url" else get_extension conf false fname in
@@ -813,7 +821,6 @@ let effective_copy_portrait_to_blason conf base p =
     String.concat Filename.dir_sep
       [ dir; Image.default_image_filename "blasons" base p ^ ext ]
   in
-  (* FIXME *)
   let has_blason_self = Image.has_blason conf base p true in
   let _deleted =
     (if has_blason_self then effective_delete_c_ok ~portrait:false conf base p
@@ -821,11 +828,39 @@ let effective_copy_portrait_to_blason conf base p =
     <> ""
   in
   let portrait_filename = fname in
-  rn portrait_filename blason_filename;
-  let _ = effective_delete_c_ok ~portrait:true conf base p in
+  cp portrait_filename blason_filename;
   History.record conf base
     (U_Send_image (Util.string_gen_person base (gen_person_of_person p)))
     "cb";
+  blason_filename
+
+let effective_copy_image_to_blason conf base p =
+  let fname =
+    try (List.assoc "file_name" conf.env :> string) with Not_found -> ""
+  in
+  let keydir = Image.default_image_filename "portraits" base p in
+  let ext = Filename.extension fname in
+  let blason_filename =
+    String.concat Filename.dir_sep
+      [
+        Image.portrait_folder conf;
+        Image.default_image_filename "blasons" base p ^ ext;
+      ]
+  in
+  let has_blason_self = Image.has_blason conf base p true in
+  let _deleted =
+    (if has_blason_self then effective_delete_c_ok ~portrait:false conf base p
+    else "OK")
+    <> ""
+  in
+  let fname =
+    String.concat Filename.dir_sep
+      [ Image.carrousel_folder conf; keydir; fname ]
+  in
+  cp fname blason_filename;
+  History.record conf base
+    (U_Send_image (Util.string_gen_person base (gen_person_of_person p)))
+    "cd";
   blason_filename
 
 (* carrousel *)
@@ -842,7 +877,7 @@ let effective_reset_c_ok ?(portrait = true) conf base p =
     | "portraits" -> Image.default_image_filename "portraits" base p
     | "blasons" -> Image.default_image_filename "blasons" base p
     | "carrousel" -> (
-      try (List.assoc "file_name" conf.env :> string) with Not_found -> "")
+        try (List.assoc "file_name" conf.env :> string) with Not_found -> "")
     | _ -> "xx"
   in
   let ext = get_extension conf false file_name in
@@ -866,13 +901,12 @@ let effective_reset_c_ok ?(portrait = true) conf base p =
   let changed =
     U_Send_image (Util.string_gen_person base (gen_person_of_person p))
   in
-  History.record conf base changed 
+  History.record conf base changed
     (match mode with
     | "portraits" -> "rp"
     | "blasons" -> "rb"
     | "carrousel" -> "rc"
-    | _ -> "r?"
-    );
+    | _ -> "r?");
   file_name
 
 (* ************************************************************************** *)
@@ -980,6 +1014,8 @@ let print_main_c conf base =
                     | _ -> (conf, "idigest error"))
                 | Some "PORTRAIT_TO_BLASON" ->
                     (conf, effective_copy_portrait_to_blason conf base p)
+                | Some "IMAGE_TO_BLASON" ->
+                    (conf, effective_copy_image_to_blason conf base p)
                 | Some "BLASON_STOP" ->
                     let has_blason_self = Image.has_blason conf base p true in
                     let has_blason = Image.has_blason conf base p false in

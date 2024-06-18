@@ -3483,7 +3483,7 @@ and eval_bool_person_field conf base env (p, p_auth) = function
       | _ -> false)
   | "has_blason_url" -> (
       match Image.get_blason conf base p true with
-      | Some (`Url _url) -> true
+      | Some (`Path p) when Filename.extension p = ".url" -> true
       | _ -> false)
   | "has_old_blason_url" -> (
       match Image.get_old_portrait_or_blason conf base "blasons" p with
@@ -4206,6 +4206,10 @@ and string_of_image_url conf base (p, p_auth) html : Adef.escaped_string =
 and string_of_blason_url conf base (p, p_auth) html : Adef.escaped_string =
   if p_auth then
     match Image.get_blason conf base p false with
+    | Some (`Path fname) when Filename.extension fname = ".url" -> (
+        match Some (Secure.open_in fname) with
+        | Some ic -> Adef.escaped (input_line ic)
+        | None -> Adef.escaped "")
     | Some (`Path fname) ->
         (* p is not the blason owner *)
         let s = Unix.stat fname in
