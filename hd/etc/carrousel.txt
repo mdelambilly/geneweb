@@ -200,7 +200,7 @@
             <strong><samp class="text-truncate">%portraits_store;%X;</samp></strong><samp>%nn;
             %portrait_name;%end;</samp>
           <a role="button" class="ml-auto mt-1"
-            href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&idigest=%idigest;"
+            href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&idigest=%idigest;&file_name=%portrait_name;"
             data-toggle="tooltip" data-html="true" data-placement="left"
             title='<i class="far fa-trash-can text-warning mr-1"></i><strong>[*delete portrait]</strong><br><span class="small">%portrait;</span><br>
                 <img class="rounded my-1"
@@ -228,7 +228,7 @@
             <strong><samp class="text-truncate">%portraits_store;%X;</samp></strong><samp>%nn;
             %portrait_saved_name;%end;</samp>
             <a role="button" class="ml-auto col-1"
-              href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&idigest=%idigest;&delete=on"
+              href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&idigest=%idigest;&delete=on&file_name=%portrait_saved_name;"
               data-toggle="tooltip" data-html="true" data-placement="left"
                title='<i class="far fa-trash-can text-danger mr-1"></i><strong>[*delete saved portrait]0</strong><br><span class="small">%portrait_saved;</span><br>
                     <img class="rounded my-1"
@@ -256,7 +256,7 @@
             </a>
             <strong><samp class="text-truncate">%portraits_store;%X;</samp></strong><samp>%nn;%blason_name;</samp>
             <a role="button" class="ml-auto col-1"
-              href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&mode=blasons&fdigest=%idigest;"
+              href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&mode=blasons&fdigest=%idigest;&file_name=%blason_name;"
               data-toggle="tooltip" data-html="true" data-placement="left"
               title='<i class="far fa-trash-can text-warning mr-1"></i><strong>[*delete coat of arms]</strong><br><span class="small">%blason;</span><br>
                        <img class="rounded my-1" src="%blason_url;" width="185px">'>
@@ -285,7 +285,7 @@
       %elseif;has_blason_stop;
         <div class="d-flex mt-1">
           <span>%self; [stopped using the coat of arms of]0 <a href="%prefix;%blason_owner.access;">%blason_owner;</a></span>%nn;
-          <a role="button" class="ml-auto col-1" href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&mode=blasons&fdigest=%idigest;"
+          <a role="button" class="ml-auto col-1" href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&mode=blasons&fdigest=%idigest;&file_name=%blason_stop_name;"
              data-toggle="tooltip" data-html="true" data-placement="left">
             <i class="far fa-trash-can text-warning"></i>%nn;</a> 
         </div>
@@ -319,7 +319,7 @@
             <i class="fa fa-retweet fa-rotate-90 fa-fw text-success"></i>%nn;</a>
           <strong><samp class="text-truncate">%saved_portraits_store;%X;</samp></strong><samp>
           %blason_saved_name;</samp>
-          <a role="button" class="ml-auto col-1" href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&mode=blasons&delete=on&fdigest=%idigest;"
+          <a role="button" class="ml-auto col-1" href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&mode=blasons&delete=on&fdigest=%idigest;&file_name=%blason_saved_name;"
             data-toggle="tooltip" data-html="true" data-placement="left"%sp;
             title='<strong>[*delete saved coat of arms]0</strong><br><span class="small">%blason_saved;</span><br>
                    <img class="rounded my-1" src="%if;has_old_blason_url;%blason_saved;%else;%prefix;kch=%random.bits;&m=FIM_C_S&i=%index;%end;" width="185px">'>
@@ -369,7 +369,7 @@
             <samp class="text-truncate ml-1" title="%images_store;%X;%carrousel;%X;%carrousel_img;">%carrousel_img;</samp>
             <div class="ml-auto">
               <a role="button"
-                href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&file_name=%carrousel_img;&mode=carrousel&idigest=%idigest;"
+                href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&mode=carrousel&idigest=%idigest;&file_name=%carrousel_img;"
                 data-toggle="tooltip" data-html="true" data-placement="left"
                 title='<i class="far fa-trash-can text-warning mr-1"></i><strong>[*delete image]</strong><br>
                     <span class="small">%carrousel_img;</span><br>
@@ -408,8 +408,7 @@
             <samp class="text-truncate ml-1" title="%images_store;%X;saved%X;%carrousel_img;">%carrousel_img;</samp>
             <a role="button" class="ml-auto"
                 href="%prefix;m=DEL_IMAGE_C_OK&i=%index%nn;
-                  &idigest=%idigest;&file_name=%carrousel_img;&mode=carrousel%nn;
-                  &delete=on"%sp;
+                  &idigest=%idigest;&mode=carrousel&delete=on&file_name=%carrousel_img;"%sp;
                 data-toggle="tooltip" data-html="true" data-placement="left"
                 title='<i class="far fa-trash-can text-warning mr-1"></i><strong>[*delete saved image]</strong><br>
                     <span class="small">%carrousel_img;</span><br>

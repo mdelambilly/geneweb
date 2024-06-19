@@ -321,7 +321,9 @@ let get_blason_name conf base p =
 
 let get_old_portrait_name conf base p =
   let name = default_image_filename "portraits" base p in
-  let f = String.concat Filename.dir_sep [(portrait_folder conf); "saved";  name] in
+  let f =
+    String.concat Filename.dir_sep [ portrait_folder conf; "saved"; name ]
+  in
   match find_img_opt f with
   | Some (`Path p) -> Filename.basename p
   | Some (`Url _u) -> name ^ ".url"
@@ -329,7 +331,9 @@ let get_old_portrait_name conf base p =
 
 let get_old_blason_name conf base p =
   let name = default_image_filename "blasons" base p in
-  let f = String.concat Filename.dir_sep [(portrait_folder conf); "saved";  name] in
+  let f =
+    String.concat Filename.dir_sep [ portrait_folder conf; "saved"; name ]
+  in
   match find_img_opt f with
   | Some (`Path p) -> Filename.basename p
   | Some (`Url _u) -> name ^ ".url"
