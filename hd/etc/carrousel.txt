@@ -272,7 +272,7 @@
                 %foreach;ancestor;
                   %for;i;1;12;
                     %if;(ancestor.anc_sosa.v=2^i)
-                      <a class="dropdown-item small" href="%apply;url_set%with;m/ia%and;BLASON_MOVE_TO_ANC/%ancestor.index;%end;"
+                      <a class="dropdown-item small" href="%prefix;m=BLASON_MOVE_TO_ANC&i=%index;&ia=%ancestor.index;"
                         title="[*move coat of arms to]0 %ancestor; %ancestor.dates_notag; (Sosa %ancestor.anc_sosa.v;),
                                %apply;a_of_b%with;%apply;anc_name(i)%and;%self;%end;">%ancestor; %ancestor.dates;</a>
                     %end;
