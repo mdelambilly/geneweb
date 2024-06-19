@@ -721,7 +721,7 @@ let treat_request =
 
         | "RESET_IMAGE_C_OK" ->
           w_base @@ ImageCarrousel.print_main_c
-        |"BLASON_UP_ONE" -> w_base @@ ImageCarrousel.print_main_c
+        |"BLASON_MOVE_TO_ANC" -> w_base @@ ImageCarrousel.print_main_c
         |"BLASON_STOP" -> w_base @@ ImageCarrousel.print_main_c
         |"PORTRAIT_TO_BLASON" -> w_base @@ ImageCarrousel.print_main_c
         |"IMAGE_TO_BLASON" -> w_base @@ ImageCarrousel.print_main_c

@@ -929,8 +929,8 @@ let print_main_c conf base =
               let p = poi base (Gwdb.iper_of_string ip) in
               let digest = Image.default_image_filename "portraits" base p in
               let conf, report =
-                match Util.p_getenv conf.env "m" with
-                | Some "SND_IMAGE_C_OK" ->
+                match m with
+                | "SND_IMAGE_C_OK" ->
                     let mode =
                       try (List.assoc "mode" conf.env :> string)
                       with Not_found -> "portraits"
@@ -976,7 +976,7 @@ let print_main_c conf base =
                           ~portrait:(if idigest = fdigest then false else true)
                           conf base p file file_name )
                     else (conf, "idigest error")
-                | Some "DEL_IMAGE_C_OK" ->
+                | "DEL_IMAGE_C_OK" ->
                     let idigest =
                       try (List.assoc "idigest" conf.env :> string)
                       with Not_found -> ""
@@ -990,7 +990,7 @@ let print_main_c conf base =
                     else if fdigest != "" then
                       (conf, effective_delete_c_ok ~portrait:false conf base p)
                     else (conf, "idigest error")
-                | Some "RESET_IMAGE_C_OK" ->
+                | "RESET_IMAGE_C_OK" ->
                     let idigest =
                       try (List.assoc "idigest" conf.env :> string)
                       with Not_found -> ""
@@ -1004,25 +1004,26 @@ let print_main_c conf base =
                     else if fdigest != "" then
                       (conf, effective_reset_c_ok ~portrait:false conf base p)
                     else (conf, "idigest error")
-                | Some "BLASON_UP_ONE" -> (
-                    let has_blason_self = Image.has_blason conf base p true in
-                    match get_parents p with
-                    | Some ifam when has_blason_self ->
-                        let cpl = foi base ifam in
-                        let fa = poi base (get_father cpl) in
+                | "BLASON_MOVE_TO_ANC" ->
+                    if Image.has_blason conf base p true then
+                      match Util.p_getenv conf.env "ia" with
+                      | Some ia ->
+                        let fa = poi base (Gwdb.iper_of_string ia) in
                         (conf, move_blason_file conf base p fa)
-                    | _ -> (conf, "idigest error"))
-                | Some "PORTRAIT_TO_BLASON" ->
+                      | None -> (conf, "")
+                    else
+                      (conf, "")
+                | "PORTRAIT_TO_BLASON" ->
                     (conf, effective_copy_portrait_to_blason conf base p)
-                | Some "IMAGE_TO_BLASON" ->
+                | "IMAGE_TO_BLASON" ->
                     (conf, effective_copy_image_to_blason conf base p)
-                | Some "BLASON_STOP" ->
+                | "BLASON_STOP" ->
                     let has_blason_self = Image.has_blason conf base p true in
                     let has_blason = Image.has_blason conf base p false in
                     if has_blason && not has_blason_self then
                       (conf, create_blason_stop conf base p)
                     else (conf, "idigest error")
-                | Some "IMAGE_C" -> (conf, "image")
+                | "IMAGE_C" -> (conf, "image")
                 | _ -> (conf, "incorrect request")
               in
               match report with
