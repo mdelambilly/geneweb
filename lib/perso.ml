@@ -3789,12 +3789,12 @@ and eval_str_person_field conf base env ((p, p_auth) as ep) = function
       | Some src -> Image.src_to_string src |> str_val
       | None -> null_val)
   | "portrait_name" -> (
+      (* TODO what do we want here? can we remove this? *)
       match Image.get_portrait conf base p with
       | Some (`Path s) -> str_val (Filename.basename s)
-      | Some (`Url u) -> str_val u (* ?? *)
+      | Some (`Url u) -> str_val (Filename.basename u)
       | None -> null_val)
-  | "blason_name" -> str_val (Image.get_blason_name conf base p false)
-  | "blason_name_self" -> str_val (Image.get_blason_name conf base p true)
+  | "blason_name" -> str_val (Image.get_blason_name conf base p)
   | "portrait_saved" -> (
       match Image.get_old_portrait_or_blason conf base "portraits" p with
       | Some (`Path s) -> str_val s
@@ -3805,16 +3805,8 @@ and eval_str_person_field conf base env ((p, p_auth) as ep) = function
       | Some (`Path s) -> str_val s
       | Some (`Url u) -> str_val u
       | None -> null_val)
-  | "blason_saved_name" -> (
-      match Image.get_old_portrait_or_blason conf base "blasons" p with
-      | Some (`Path s) -> str_val (Filename.basename s)
-      | Some (`Url u) -> str_val u
-      | None -> null_val)
-  | "portrait_saved_name" -> (
-      match Image.get_old_portrait_or_blason conf base "portraits" p with
-      | Some (`Path s) -> str_val (Filename.basename s)
-      | Some (`Url u) -> str_val u (* ?? *)
-      | None -> null_val)
+  | "portrait_saved_name" -> str_val (Image.get_old_portrait_name conf base p)
+  | "blason_saved_name" -> str_val (Image.get_old_blason_name conf base p)
   | "X" -> str_val Filename.dir_sep (* end carrousel functions *)
   | "key" ->
       if is_hide_names conf p && not p_auth then null_val

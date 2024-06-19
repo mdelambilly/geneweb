@@ -303,10 +303,36 @@ let get_blason conf base p self =
     loop p
   else None
 
-let get_blason_name conf base p self =
-  match get_blason conf base p self with
+let get_portrait_name conf base p =
+  let name = default_image_filename "portraits" base p in
+  let f = Filename.concat (portrait_folder conf) name in
+  match find_img_opt f with
   | Some (`Path p) -> Filename.basename p
-  | Some (`Url u) -> u
+  | Some (`Url _u) -> name ^ ".url"
+  | None -> ""
+
+let get_blason_name conf base p =
+  let name = default_image_filename "blasons" base p in
+  let f = Filename.concat (portrait_folder conf) name in
+  match find_img_opt f with
+  | Some (`Path p) -> Filename.basename p
+  | Some (`Url _u) -> name ^ ".url"
+  | None -> ""
+
+let get_old_portrait_name conf base p =
+  let name = default_image_filename "portraits" base p in
+  let f = String.concat Filename.dir_sep [(portrait_folder conf); "saved";  name] in
+  match find_img_opt f with
+  | Some (`Path p) -> Filename.basename p
+  | Some (`Url _u) -> name ^ ".url"
+  | None -> ""
+
+let get_old_blason_name conf base p =
+  let name = default_image_filename "blasons" base p in
+  let f = String.concat Filename.dir_sep [(portrait_folder conf); "saved";  name] in
+  match find_img_opt f with
+  | Some (`Path p) -> Filename.basename p
+  | Some (`Url _u) -> name ^ ".url"
   | None -> ""
 
 let has_blason conf base p self =
@@ -317,11 +343,11 @@ let has_blason conf base p self =
   | Some (`Url _u) -> true
 
 let has_blason_stop conf base p =
-  match get_blason conf base p true with
-  | None -> false
-  | Some (`Path p) when Filename.extension p = ".stop" -> true
-  | Some (`Path _p) -> false
-  | Some (`Url _u) -> false
+  match
+    src_of_string conf (path_str (full_image_path "blasons" conf base p))
+  with
+  | `Path p when Filename.extension p = ".stop" -> true
+  | _ -> false
 
 let get_blason_owner conf base p =
   if has_access_to_image "blasons" conf base p then

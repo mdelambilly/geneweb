@@ -254,7 +254,7 @@
                   <img class="rounded my-1" src="%blason_url;" width="185px">'>
               <i class="far fa-file-image fa-fw text-primary"></i>
             </a>
-            <strong><samp class="text-truncate">%portraits_store;%X;</samp></strong><samp>%nn;%if;has_blason_url;%carrousel;.url%else;%blason_name;%end;</samp>
+            <strong><samp class="text-truncate">%portraits_store;%X;</samp></strong><samp>%nn;%blason_name;</samp>
             <a role="button" class="ml-auto col-1"
               href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&mode=blasons&fdigest=%idigest;"
               data-toggle="tooltip" data-html="true" data-placement="left"
@@ -294,7 +294,7 @@
           <a role="button" href="%if;has_blason_url;%blason;%else;%prefix;kch=%random.bits;&m=FIM_C&i=%index;&mode=blasons%end;"
             target="_blank" rel="noopener" data-toggle="tooltip" data-html="true" data-placement="left"
             title='<strong>[*see coat of arms]</strong><br><span class="small">
-            %blason;</span><br><img class="rounded my-1" src="%if;has_portrait_url;%blason;%else;%prefix;kch=%random.bits;&m=FIM_C&i=%index;%end;" width="185px">'>
+            %blason_name;</span><br><img class="rounded my-1" src="%if;has_blason_url;%blason;%else;%prefix;kch=%random.bits;&m=FIM_C&i=%index;%end;" width="185px">'>
             <i class="far fa-file-image fa-fw text-primary"></i>
           </a>
           <span>[*use coat of arms of]0%sp;<a href="%prefix;%blason_owner.access;">%blason_owner;</a></span>
@@ -318,7 +318,7 @@
             title="[*restore coat of arms saved]">
             <i class="fa fa-retweet fa-rotate-90 fa-fw text-success"></i>%nn;</a>
           <strong><samp class="text-truncate">%saved_portraits_store;%X;</samp></strong><samp>
-          %if;has_old_blason_url;%carrousel;.url%else;%blason_saved_name;%end;</samp>
+          %blason_saved_name;</samp>
           <a role="button" class="ml-auto col-1" href="%prefix;m=DEL_IMAGE_C_OK&i=%index;&mode=blasons&delete=on&fdigest=%idigest;"
             data-toggle="tooltip" data-html="true" data-placement="left"%sp;
             title='<strong>[*delete saved coat of arms]0</strong><br><span class="small">%blason_saved;</span><br>
@@ -420,8 +420,10 @@
           </div>
         %end;
         %( TODO: table removed, restore formating + fix/remove this %)
+        <i class="fas fa-retweet fa-rotate-90 fa-fw mr-1"></i>
         <a href="%prefix;&m=REFRESH&i=%index;">
-          <i class="fas fa-retweet fa-rotate-90 fa-fw mr-1"></i></a>
+          <i class="fa fa-image fa-fw" aria-hidden="true"></i>%nn;
+        </a>
         <small>[*warning refresh]</small>
       %end;
     </div>

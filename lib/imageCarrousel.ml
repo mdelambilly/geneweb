@@ -115,7 +115,7 @@ let move_blason_file conf base src dst =
   let blason_dir = Image.get_dir_name "blasons" conf.bname in
   let blason_src =
     String.concat Filename.dir_sep
-      [ blason_dir; Image.get_blason_name conf base src true ]
+      [ blason_dir; Image.get_blason_name conf base src ]
   in
   if
     Image.has_blason conf base src true
@@ -544,6 +544,7 @@ let effective_send_c_ok ?(portrait = true) conf base p file file_name =
           (Util.only_printable_or_nl (Mutil.strip_all_trailing_spaces v))
     | None -> Adef.safe ""
   in
+  Printf.eprintf "Note: %s\n" (note :> string) ;
   let source =
     match Util.p_getenv conf.env "source" with
     | Some v ->
@@ -780,18 +781,20 @@ let effective_delete_c_ok ?(portrait = true) conf base p =
   if not (Sys.file_exists dir) then Mutil.mkdir_p dir;
   (* TODO verify we dont destroy a saved image
       having the same name as portrait! *)
-  let full_file =
-    Image.find_file_without_ext
-      (Filename.concat
-         (if delete then Filename.concat dir "saved" else dir)
-         fname)
-  in
-  let dir = Filename.dirname full_file in
+  let orig_file =
+    if delete then
+      String.concat Filename.dir_sep  [dir; "saved"; fname]
+    else Filename.concat dir fname
+    in
+  Printf.eprintf "orig file 1: %s\n" orig_file;
+  let orig_file = Image.find_file_without_ext orig_file in
+  Printf.eprintf "orig file 2: %s\n" orig_file;
   (* FIXME basename *)
-  let file = Filename.basename full_file in
-  if full_file = "" then incorrect conf "empty file name"
+  let file = Filename.basename orig_file in
+  Printf.eprintf "Delete: %s (%s)\n" orig_file file;
+  if orig_file = "" then incorrect conf "empty file name"
     (* if delete is on, we are talking about saved files *)
-  else if delete then Mutil.rm (Filename.concat dir file)
+  else if delete then Mutil.rm orig_file (* is it needed ?, move should do it *)
   else if move_file_to_save dir file = 0 then incorrect conf "effective delete";
   let changed =
     U_Delete_image (Util.string_gen_person base (gen_person_of_person p))
@@ -822,17 +825,22 @@ let effective_copy_portrait_to_blason conf base p =
     | _ -> (Image.default_image_filename "portraits" base p, false)
   in
   let ext = if url then ".url" else get_extension conf false fname in
+  let portrait_filename =
+    String.concat Filename.dir_sep
+      [ dir; Image.default_image_filename "portrait" base p ^ ext ]
+  in
   let blason_filename =
     String.concat Filename.dir_sep
       [ dir; Image.default_image_filename "blasons" base p ^ ext ]
   in
   let has_blason_self = Image.has_blason conf base p true in
+  (* attention, xxx.url has to be removed too *)
   let _deleted =
     (if has_blason_self then effective_delete_c_ok ~portrait:false conf base p
     else "OK")
     <> ""
   in
-  let portrait_filename = fname in
+  Printf.eprintf "Portrait fn: %s\nBlason fn: %s\n" portrait_filename blason_filename;
   cp portrait_filename blason_filename;
   History.record conf base
     (U_Send_image (Util.string_gen_person base (gen_person_of_person p)))
@@ -858,9 +866,10 @@ let effective_copy_image_to_blason conf base p =
     else "OK")
     <> ""
   in
+  (* la fonction image_to_blason part des images sauvegardées *)
   let fname =
     String.concat Filename.dir_sep
-      [ Image.carrousel_folder conf; keydir; fname ]
+      [ Image.carrousel_folder conf; keydir; "saved"; fname ]
   in
   cp fname blason_filename;
   History.record conf base
@@ -872,6 +881,8 @@ let effective_copy_image_to_blason conf base p =
 (* reset portrait or image from old folder to portrait or others *)
 
 let effective_reset_c_ok ?(portrait = true) conf base p =
+  (* WARNING: when saved portrait is an url, we should update the person record
+  when doing a reset  idem for delete *)
   let _ = portrait in
   let mode =
     try (List.assoc "mode" conf.env :> string) with Not_found -> "portraits"

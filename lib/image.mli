@@ -109,7 +109,10 @@ val get_blason :
     - [Some src] with [src] the url or path of [p]'s portrait.
 *)
 
-val get_blason_name : config -> base -> person -> bool -> string
+val get_portrait_name : config -> base -> person -> string
+val get_old_portrait_name : config -> base -> person -> string
+val get_blason_name : config -> base -> person -> string
+val get_old_blason_name : config -> base -> person -> string
 
 val get_old_portrait_or_blason :
   config ->
