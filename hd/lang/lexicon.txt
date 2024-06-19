@@ -6819,8 +6819,8 @@ tr: sil
 en: delete coat of arms
 fr: supprimer le blason
 
-    delete coat of arms saved
-en: delete saved coat of arms
+    delete saved coat of arms
+en: delete the saved coat of arms
 fr: supprimer le blason sauvegardé
 
     delete image
@@ -6829,7 +6829,7 @@ de: Bild löschen
 en: delete image
 fr: supprimer une image
 
-    delete image saved
+    delete saved image
 co: squassà a fiura arregistrata
 de: das gespeicherte Bild löschen
 en: delete saved image
@@ -6841,7 +6841,7 @@ de: Porträt löschen
 en: delete portrait
 fr: supprimer le portrait
 
-    delete portrait saved
+    delete saved portrait
 co: squassà u ritrattu arregistratu
 de: das gespeicherte Porträt löschen
 en: delete saved portrait
@@ -12248,9 +12248,9 @@ sl: več kot %d zadetkov
 sv: fler än %d svar
 tr: %d cevaptan daha fazla
 
-    move coat of arms to father
-fr: déplacer le blason vers le père
-en: move coat of arms to father
+    move coat of arms to
+en: move the coat of arms to/raise the coat of arms to first known holder who bored it
+fr: déplacer le blason vers/remonter le blason au premier ancêtre connu l’ayant porté
 
     move union comments to notes
 en: transfer the historical “comments of union” input to the adjacent “marriage notes” one.
@@ -16761,9 +16761,9 @@ sv: medan du stannar på detta verktyg
 tr: bu araç üzerinde kalırken
 zh: 在此工具上停留时
 
-    stops to use coat of arms of
-fr: à arrêter d'utiliser le blason de
-en: stops to use coat of arms of
+    stopped using the coat of arms of
+en: stopped using the coat of arms of/this individual stopped using his ancestor coat of arms
+fr: a arrêté d’utiliser le blason de/cet individu a arrêté d’utiliser le blason de son ancêtre
 
     store image
 co: a fiura selezziunata serà piazzata in
@@ -18950,6 +18950,7 @@ fr: envoyé/envoyée
 co: indirizzu web
 de: URL
 en: URL
+es: LRU
 fr: URL
 
     restore default_sosa_ref
@@ -18989,8 +18990,8 @@ sv: använd "länk" istället för "skapa"
 tr: "oluştur" yerine "bağlantı" kullanın
 
     use coat of arms of
-fr: utilise le blason de
 en: use coat of arms of
+fr: utilise le blason de
 
     user and language variables
 af: gebruiker- en taalveranderlikes
