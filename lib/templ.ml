@@ -1100,6 +1100,7 @@ let rgb_of_str_hsv h s v =
 let eval_var conf ifun env ep loc sl =
   try
     match sl with
+    | [ "reorg" ] -> VVbool !GWPARAM.reorg
     | [ "env"; "key" ] -> (
         match ifun.get_vother (List.assoc "binding" env) with
         | Some (Vbind (k, _)) -> VVstring k
