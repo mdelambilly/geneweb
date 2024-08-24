@@ -6,6 +6,7 @@ open Gwdb
 open TemplAst
 open Util
 
+
 let max_im_wid = 240
 let round_2_dec x = floor ((x *. 100.0) +. 0.5) /. 100.0
 
@@ -2539,6 +2540,26 @@ and eval_title_field_var conf base env (_p, (nth, name, title, places, dates))
           | Some (Dtext d) -> VVstring (d |> escape_html :> string)
           | None -> null_val)
       | _ -> VVstring "multiple dates")
+  | "cdate_begin" :: sl -> (
+      match dates with
+      | [ (d,_) ] -> (
+        match d with
+        | Some dt -> (
+          match Date.od_of_cdate (Date.cdate_of_date dt) with
+          | Some dat -> eval_date_field_var conf dat sl
+          | None -> null_val)
+        | None -> null_val)
+      | _ -> null_val)
+  | "cdate_end" :: sl -> (
+      match dates with
+      | [ (_,d) ] -> (
+        match d with
+        | Some dt -> (
+          match Date.od_of_cdate (Date.cdate_of_date dt) with
+          | Some dat -> eval_date_field_var conf dat sl
+          | None -> null_val)
+        | None -> null_val)
+      | _ -> null_val)
   | _ -> raise Not_found
 
 and eval_relation_field_var conf base env (i, rt, ip, is_relation) loc =
@@ -2911,6 +2932,7 @@ and eval_person_field_var conf base env ((p, p_auth) as ep) loc = function
           in
           VVbool r
       | _ -> raise Not_found)
+  | [ "idigest" ] -> Image.default_image_filename "portraits" base p |> str_val
   | [ "linked_pages_nbr" ] -> (
       match get_env "nldb" env with
       | Vnldb db ->
@@ -2991,7 +3013,7 @@ and eval_person_field_var conf base env ((p, p_auth) as ep) loc = function
           let pl = sou base t.t_place in
           eval_nobility_title_field_var (id, pl) sl
       | Some _ | None -> null_val)
-  | "self" :: sl -> eval_person_field_var conf base env ep loc sl
+  | "self2" :: sl -> eval_person_field_var conf base env ep loc sl
   | "sosa" :: sl -> (
       match get_env "sosa" env with
       | Vsosa x -> (
@@ -3043,6 +3065,18 @@ and eval_person_field_var conf base env ((p, p_auth) as ep) loc = function
   | _ -> raise Not_found
 
 and eval_date_field_var conf d = function
+  | [ "date1_is_empty" ] -> (
+    match d with
+    | Dgreg (dmy, _) ->
+      bool_val (dmy.day = 0 && dmy.month = 0 && dmy.year = 0)
+    | _ -> bool_val true)
+    | [ "date2_is_empty" ] -> (
+      match d with
+      | Dgreg (dmy, _) -> (
+          match dmy.prec with
+          | OrYear dmy2 | YearInt dmy2 -> bool_val (dmy2.day2 = 0 && dmy2.month2 = 0 && dmy2.year2 = 0)
+          | _ -> bool_val true)
+      | _ -> bool_val true)
   | [ "prec" ] -> (
       match d with
       | Dgreg (dmy, _) ->
@@ -3951,6 +3985,7 @@ and eval_str_person_field conf base env ((p, p_auth) as ep) = function
       | Buried cod -> date_aux conf p_auth cod
       | Cremated _ | UnknownBurial -> raise Not_found)
   | "psources" -> get_psources p |> get_note_source conf base ~p p_auth false
+  | "paccess" ->  (match get_access p with Private -> "Private" | Public -> "Public" | IfTitles -> "IfTitles") |> str_val
   | "slash_burial_date" ->
       if p_auth then
         match get_burial p with
@@ -5359,7 +5394,7 @@ let print_foreach conf base print_ast eval_expr =
                   let env = ("baseprefix", Vstring baseprefix) :: env in
                   loop env ep efam sl
               | None -> warning_use_has_parents_before_parent loc "mother" ()))
-      | "self" :: sl -> loop env ep efam sl
+      | "self3" :: sl -> loop env ep efam sl
       | "spouse" :: sl -> (
           match efam with
           | Vfam (_, _, (_, _, ip), _) ->

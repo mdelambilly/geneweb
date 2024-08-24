@@ -372,6 +372,8 @@ let rec eval_variable conf = function
       with Failure _ | Invalid_argument _ -> raise Not_found)
   | "nb_persons" :: sl -> eval_int conf conf.nb_of_persons sl
   | "nb_families" :: sl -> eval_int conf conf.nb_of_families sl
+  | "person_count" :: sl -> string_of_int conf.nb_of_persons
+  | "family_count" :: sl -> string_of_int conf.nb_of_families
   | "sosa_ref" :: sl -> eval_sosa_ref conf sl
   | [ "substr_start"; n; v ] -> (
       (* extract the n first characters of string v *)
