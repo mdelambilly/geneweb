@@ -27,9 +27,11 @@
 <div id="description"></div>
 
 <map id="map" name="map"></map>
+<a id="first" href="#" onclick="loadFirstImage(); return false;">firts</a>
 <a id="previous" href="#" onclick="loadPreviousImage(); return false;">previous</a> 
 image <a id="current"></a> / <a id="imageCount"></a>
 <a id="next" href="#" onclick="loadNextImage(); return false;">next</a>
+<a id="last" href="#" onclick="loadLastImage(); return false;">last</a>
 <img id="image" class="mt-1" usemap="#map" alt=""><!-- no src, managed on javascript side -->
 <div class="d-none" id="div_legend">%nn;
   [*on this image][:]
@@ -89,20 +91,36 @@ var json;
 function displayLinks() {
   if(current == imagesCount - 1) {
     $("#next").hide();
+    $("#last").hide();
   }
   else {
     $("#next").show();
+    $("#last").show();
   }
 
   if(current == 0) {
     $("#previous").hide();
+    $("#first").hide();
   }
   else {
     $("#previous").show();
+    $("#first").show();
   }
 
   $("#current").text(current + 1);
   $("#imageCount").text(imagesCount);
+}
+
+function loadFirstImage() {
+  current = 0;
+  displayLinks();
+  loadCurrentImage(); 
+}
+
+function loadLastImage() {
+  current = imagesCount - 1;
+  displayLinks();
+  loadCurrentImage(); 
 }
 
 function loadNextImage() {
