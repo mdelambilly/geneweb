@@ -79,6 +79,14 @@ function insertTags (tagOpen, tagClose, sampleText) {
       </div>
       <div class="modal-body">
         <div class="form-row">
+          <label for="page_type" class="col-form-label col-sm-2">[*type/types]0</label>
+          <select id="page_type" class="form-control col-sm-10">
+            <option value="gallery">Photo</option>
+            <option value="album">Album</option>
+          </select>
+          <input type="text" class="form-control col-sm-10" id="page_type">
+        </div>
+        <div class="form-row">
           <label for="page_title" class="col-form-label col-sm-2">[*title/titles]0</label>
           <input type="text" class="form-control col-sm-10" id="page_title">
         </div>
@@ -129,16 +137,26 @@ function init_tool() {
   });
 }
 function init_gallery() {
+ var type = $("#page_type").val();
  var title = $("#page_title").val();
  var path = $("input[name=path]:checked").val();
  var fname = $("#fname").val();
- var res = {
-   "title": title,
-   "path": path,
-   "img": fname,
-   "map": []
- };
- $("#notes_comments").val( "TITLE=" + title +"\nTYPE=gallery\n" + JSON.stringify(res) );
+ var res;
+ if( type == "gallery") {
+  res = {
+    "title": title,
+    "path": path,
+    "img": fname,
+    "map": []
+  }
+ } else {
+  res = {
+    "title": title,
+    "path": path,
+    "images": [ {"img": fname, "map": [] } ]
+  }
+ }
+ $("#notes_comments").val( "TITLE=" + title +"\nTYPE=" + type + "\n" + JSON.stringify(res) );
  $('#init_gallery').modal('hide')
 }
 </script>
