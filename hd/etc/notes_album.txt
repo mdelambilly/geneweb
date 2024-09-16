@@ -204,10 +204,10 @@ function loadCurrentImage() {
   });
   
   $("area").mouseover(function(e) {
-      var legendId = $(this).attr("id").replace('area', 'a');
+      var legendId = $(this).attr("class").replace('area', 'a');
       $('#' + legendId + " span").addClass("in");
   }).mouseout(function(e) {
-      var legendId = $(this).attr("id").replace('area', 'a');
+      var legendId = $(this).attr("class").replace('area', 'a');
       $('#' + legendId + " span").removeClass("in");
   });
   
