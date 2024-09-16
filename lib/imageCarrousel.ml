@@ -476,7 +476,7 @@ let effective_send_c_ok conf base p file file_name =
           | _ -> (typ, content))
     else (GIF, content (* we dont care which type, content = "" *))
   in
-  let keydir = Image.default_image_filename "portraits" base p in
+  let keydir = Image.default_image_filename mode base p in
   let dir =
     if mode = "portraits" || mode = "blasons" then !GWPARAM.portraits_d conf.bname
     else Filename.concat (!GWPARAM.images_d conf.bname) keydir
