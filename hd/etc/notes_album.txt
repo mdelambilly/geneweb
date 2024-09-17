@@ -217,7 +217,6 @@ function loadCurrentImage() {
   $("#image").mouseleave(function() {
     reapplyGrouping();
   });
-  
 }
 
 $(document).ready(function() {
