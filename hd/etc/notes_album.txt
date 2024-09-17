@@ -188,7 +188,6 @@ function loadCurrentImage() {
         $("#map").append( "<area class='area" + cnt + "' shape='" + get(item.shape) + "' coords='" + get(item.coords) + "' alt='" + txt + "' title='" + txt + "'>" );
     });
     
-
     cnt++;
   });
 
