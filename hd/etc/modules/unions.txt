@@ -217,9 +217,9 @@
   %reset_count;%reset_count2;
   %foreach;family;
     %incr_count;
-    %if;(spouse.has_image)%incr_count2;%end;
+    %if;(spouse.has_image or spouse.has_blason)%incr_count2;%end;
     %foreach;child;
-      %if;(child.has_image)%incr_count2;%end;
+      %if;(child.has_image or child.has_blason)%incr_count2;%end;
     %end;
     <ul class="pl-4 py-0%if;(wizard and not cancel_links) fa-ul ml-0%end; mb-0">
     %if;not (wizard and not cancel_links)%apply;li_SD("spouse")
@@ -312,7 +312,7 @@
                 <div class="d-flex flex-row mt-1">%count1;.
                   %if;child.has_image;
                     %apply;picture("child","image")
-                  %elseif;child.has_blason_self;
+                  %elseif;child.has_blason;
                     %apply;picture("child","blason")
                   %elseif;(b.default_image="yes")
                     <img class="small_image align-self-center rounded ml-2" src="%images_prefix;img_unknown_%if;(is_female)wo%elseif;(is_male)%else;u_%end;man.png" alt="[missing image]"
