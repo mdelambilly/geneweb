@@ -185,7 +185,7 @@ function loadCurrentImage() {
     }
 
     maps.forEach( function (item) {
-        $("#map").append( "<area class='area" + cnt + "' shape='" + get(item.shape) + "' coords='" + get(item.coords) + "' alt='" + txt + "' title='" + txt + "'>" );
+        $("#map").append( "<area class='area" + cnt + "' shape='" + get(item.shape) + "' coords='" + get(item.coords) + "' alt='" + txt + "' title='" + txt + "' href='" + href + "' target='_blank'>" );
     });
     
     cnt++;
@@ -204,10 +204,14 @@ function loadCurrentImage() {
   
   $("area").mouseover(function(e) {
       var legendId = $(this).attr("class").replace('area', 'a');
+      var areaId = $(this).attr("class");
       $('#' + legendId + " span").addClass("in");
+      $('.' + areaId).data('maphilight', {...defaultMapHighlightSettings, alwaysOn: true, groupBy: false}).trigger('alwaysOn.maphilight');
   }).mouseout(function(e) {
       var legendId = $(this).attr("class").replace('area', 'a');
+      var areaId = $(this).attr("class");
       $('#' + legendId + " span").removeClass("in");
+      $('.' + areaId).data('maphilight', defaultMapHighlightSettings).trigger('alwaysOn.maphilight');
   });
   
   $("#legend, #unknown").mouseleave(function() {
