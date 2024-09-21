@@ -12,35 +12,43 @@
   %include;hed
 </head>
 <body%body_prop;>
-<div class="container-fluid mx-2 text-xs-center">
-<div class="small float-right mr-4 mt-2">
-  (<a href="%url;&ref=on">[linked pages]</a>)
-</div>
-%include;home
-<h1 id="h1">Chargement en cours…</h1>
-%if(wizard)
-  <div class="small float-right mr-4">
-    (<a href="%prefix;m=MOD_NOTES&f=%e.f;">[modify]</a>)
+  
+<div class="container">
+  <div class="small float-right mr-4 mt-2">
+    (<a href="%url;&ref=on">[linked pages]</a>)
   </div>
-%end;
+  %include;home
+  <h1 id="h1">Chargement en cours…</h1>
+  %if(wizard)
+    <div class="small float-right mr-4">
+      (<a href="%prefix;m=MOD_NOTES&f=%e.f;">[modify]</a>)
+    </div>
+  %end;
 
-<div id="description"></div>
+  <div id="description"></div>
+  <map id="map" name="map"></map>
+  <div class="d-flex justify-content-center">
+    <div class="p-2 bd-highlight"><a id="first" href="#" onclick="loadFirstImage(); return false;"><i class="fa-solid fa-backward"></i></a></div>
+    <div class="p-2 bd-highlight"><a id="previous" href="#" onclick="loadPreviousImage(); return false;"><i class="fa-solid fa-caret-left"></i></a> </div>
+    <div class="p-2 bd-highlight"><a id="current"></a> / <a id="imageCount"></a></div>
+    <div class="p-2 bd-highlight"><a id="next" href="#" onclick="loadNextImage(); return false;"><i class="fa-solid fa-caret-right"></i></a></div>
+    <div class="p-2 bd-highlight"><a id="last" href="#" onclick="loadLastImage(); return false;"><i class="fa-solid fa-forward"></i></a></div>
+  </div>
 
-<map id="map" name="map"></map>
-<a id="first" href="#" onclick="loadFirstImage(); return false;">firts</a>
-<a id="previous" href="#" onclick="loadPreviousImage(); return false;">previous</a> 
-image <a id="current"></a> / <a id="imageCount"></a>
-<a id="next" href="#" onclick="loadNextImage(); return false;">next</a>
-<a id="last" href="#" onclick="loadLastImage(); return false;">last</a>
-<img id="image" class="mt-1" usemap="#map" alt=""><!-- no src, managed on javascript side -->
-<div class="d-none" id="div_legend">%nn;
-  [*on this image][:]
-  <a id="rlm" href="%prefix;m=RLM" title="[*relations tree]"><img src="%image_prefix;/gui_create.png" height="18" alt="Tree"></a>
-  <ul id="legend" class="d-inline list_comma list-unstyled p-0"></ul>
-</div>
-<div class="d-none" id="div_unknown">%nn;
-  [*unknown person][:]%nn; <ul id="unknown" class="d-inline list_comma list-unstyled pl-0"></ul>
-</div>
+  <div class="d-flex justify-content-center">
+    <img id="image" usemap="#map" alt=""><!-- no src, managed on javascript side -->
+  </div>
+
+  <div class="d-flex justify-content-between">
+    <div class="d-none" id="div_legend">%nn;
+      [*on this image][:]
+      <a id="rlm" href="%prefix;m=RLM" title="[*relations tree]"><img src="%image_prefix;/gui_create.png" height="18" alt="Tree"></a>
+      <ul id="legend" class="d-inline list_comma list-unstyled p-0"></ul>
+    </div>
+    <div class="d-none" id="div_unknown">%nn;
+      [*unknown person][:]%nn; <ul id="unknown" class="d-inline list_comma list-unstyled pl-0"></ul>
+    </div>
+  </div>
 
 </div>
 %include;trl
@@ -89,24 +97,6 @@ var imagesCount=0;
 var json;
 
 function displayLinks() {
-  if(current == imagesCount - 1) {
-    $("#next").hide();
-    $("#last").hide();
-  }
-  else {
-    $("#next").show();
-    $("#last").show();
-  }
-
-  if(current == 0) {
-    $("#previous").hide();
-    $("#first").hide();
-  }
-  else {
-    $("#previous").show();
-    $("#first").show();
-  }
-
   $("#current").text(current + 1);
   $("#imageCount").text(imagesCount);
 }
@@ -124,7 +114,7 @@ function loadLastImage() {
 }
 
 function loadNextImage() {
-  if(current < imagesCount) {
+  if(current < imagesCount - 1) {
     current = current + 1;
     displayLinks();
     loadCurrentImage(); 

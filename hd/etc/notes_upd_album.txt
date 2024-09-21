@@ -34,7 +34,7 @@
   %include;hed
 </head>
 <body%body_prop;>
-<div class="container-fluid">
+<div class="container">
 %include;home
 
 <h1 class="mt-1 ml-2">Éditeur d’image réactives%( TODO: TRANSLATE ME%)</h1>
@@ -42,59 +42,61 @@
 <div id="fd_error"></div>
 
 <form id="form" class="mt-2" method="post" action="%action;">
-  <div class="col-sm-12 col-lg-9 mr-3">
+ 
+  <div class="form-row">
+    <label for="page_title" class="col-form-label col-sm-2">[*title/titles]0</label>
+    <input type="text" class="form-control col-sm" id="page_title">
+  </div>
+  <div class="form-row mt-2">
+    <label for="page_desc" class="col-form-label col-sm-2">Description</label>
+    <textarea class="form-control col-sm" id="page_desc" rows="1"></textarea>
+  </div>
+  <fieldset class="form-group mb-0  mt-2">
     <div class="form-row">
-      <label for="page_title" class="col-form-label col-sm-2">[*title/titles]0</label>
-      <input type="text" class="form-control col-sm-9" id="page_title">
-    </div>
-    <div class="form-row mt-2">
-      <label for="page_desc" class="col-form-label col-sm-2">Description</label>
-      <textarea class="form-control col-sm-9" id="page_desc" rows="1"></textarea>
-    </div>
-    <fieldset class="form-group mb-0  mt-2">
-      <div class="form-row">
-        <legend class="col-form-label col-sm-2 pt-2">Chemin</legend>
-        <div class="form-check form-check-inline col-sm-9 pl-2 pr-0">
-          <div class="custom-control custom-radio custom-control-inline">
-            <input id="doc" class="custom-control-input" type="radio" name="path" value="doc" checked>
-            <label for="doc" class="custom-control-label" title="m=DOC&s=…">DOC</label>
-          </div>
-          <div class="custom-control custom-radio custom-control-inline">
-            <input id="public" class="custom-control-input" type="radio" name="path" value="public">
-            <label for="public" class="custom-control-label"
-              title="gallery_path=%b.gallery_path;">[*iftitles/public/private]1</label>
-          </div>
-          <div class="custom-control custom-radio custom-control-inline">
-            <input id="private" class="custom-control-input" type="radio" name="path" value="private">
-            <label for="private" class="custom-control-label"
-              title="gallery_path_private=%b.gallery_path_private;">[*iftitles/public/private]2</label>
-          </div>
-          <div class="custom-control custom-radio custom-control-inline">
-            <input id="other" class="custom-control-input" type="radio" name="path" value="other">
-            <label for="other" class="custom-control-label">Autre</label>
-          </div>
-          <input id="path" type="text" class="form-control flex-fill" placeholder="Autre chemin" disabled>
+      <legend class="col-form-label col-sm-2 pt-2">Chemin</legend>
+      <div class="form-check form-check-inline col-sm pl-2 pr-0">
+        <div class="custom-control custom-radio custom-control-inline">
+          <input id="doc" class="custom-control-input" type="radio" name="path" value="doc" checked>
+          <label for="doc" class="custom-control-label" title="m=DOC&s=…">DOC</label>
         </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input id="public" class="custom-control-input" type="radio" name="path" value="public">
+          <label for="public" class="custom-control-label"
+            title="gallery_path=%b.gallery_path;">[*iftitles/public/private]1</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input id="private" class="custom-control-input" type="radio" name="path" value="private">
+          <label for="private" class="custom-control-label"
+            title="gallery_path_private=%b.gallery_path_private;">[*iftitles/public/private]2</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input id="other" class="custom-control-input" type="radio" name="path" value="other">
+          <label for="other" class="custom-control-label">Autre</label>
+        </div>
+        <input id="path" type="text" class="form-control flex-fill" placeholder="Autre chemin" disabled>
       </div>
-    </fieldset>
-    <div class="form-row mt-2">
-      <label for="fname" class="col-form-label col-sm-2">[*file]</label>
-      <div class="d-flex col-sm-9 px-0">
-        <input id="fname" type="text" class="form-control flex-fill">
-        %if(bvar.face_detection = "on")
-        <button id="face_detection" class="btn btn-primary ml-2 text-nowrap " disabled>Détection visages</button>
-        %end;
-      </div>
+    </div>
+  </fieldset>
+  <div class="form-row mt-2">
+    <label for="fname" class="col-form-label col-sm-2">[*file]</label>
+    <div class="d-flex col-sm px-0">
+      <input id="fname" type="text" class="form-control flex-fill">
+      %if(bvar.face_detection = "on")
+      <button id="face_detection" class="btn btn-primary ml-2 text-nowrap " disabled>Détection visages</button>
+      %end;
     </div>
   </div>
+    
   <div class="my-2 ml-2 mr-4">
-    <a id="first" href="#" onclick="loadFirstImage(); return false;">firts</a>
-    <a id="previous" href="#" onclick="loadPreviousImage(); return false;">previous</a> 
-    image <a id="current"></a> / <a id="imageCount"></a>
-    <a id="next" href="#" onclick="loadNextImage(); return false;">next</a>
-    <a id="last" href="#" onclick="loadLastImage(); return false;">last</a>
-    / <a id="remove_image" href="#" onclick="removeCurrentImage(); return false;">remove current image</a> /
-    <a id="add_image" href="#" onclick="addImage(); return false;">add image</a>
+    <div class="d-flex justify-content-center">
+      <div class="p-2 bd-highlight"><a id="first" href="#" onclick="loadFirstImage(); return false;"><i class="fa-solid fa-backward"></i></a></div>
+      <div class="p-2 bd-highlight"><a id="previous" href="#" onclick="loadPreviousImage(); return false;"><i class="fa-solid fa-caret-left"></i></a> </div>
+      <div class="p-2 bd-highlight"><a id="current"></a> / <a id="imageCount"></a></div>
+      <div class="p-2 bd-highlight"><a id="next" href="#" onclick="loadNextImage(); return false;"><i class="fa-solid fa-caret-right"></i></a></div>
+      <div class="p-2 bd-highlight"><a id="last" href="#" onclick="loadLastImage(); return false;"><i class="fa-solid fa-forward"></i></a></div>
+      <div class="p-2 bd-highlight"><a id="remove_image" href="#" onclick="removeCurrentImage(); return false;"><i class="fa-solid fa-trash-can"></i></a></div>
+      <div class="p-2 bd-highlight"><a id="add_image" href="#" onclick="addImage(); return false;"><i class="fa-solid fa-plus"></i></a></div>
+    </div>
     <div id="frame" onmousedown="return false">
       <map id="map" name="map"></map>
       <img id="image" class="img-fluid" usemap="#map">
@@ -206,23 +208,6 @@ function add_new_row( x1, y1, x2, y2 ) {
 }
 
 function displayLinks() {
-  if(current == imagesCount - 1) {
-    $("#next").hide();
-    $("#last").hide();
-  }
-  else {
-    $("#next").show();
-    $("#last").show();
-  }
-
-  if(current == 0) {
-    $("#previous").hide();
-    $("#first").hide();
-  }
-  else {
-    $("#previous").show();
-    $("#first").show();
-  }
 
   $("#current").text(current + 1);
   $("#imageCount").text(imagesCount);
@@ -241,7 +226,7 @@ function loadLastImage() {
 }
 
 function loadNextImage() {
-  if(current < imagesCount) {
+  if(current < imagesCount - 1) {
     saveCurrentImageToJson();
     current = current + 1;
     displayLinks();
