@@ -35,19 +35,15 @@
     <div class="p-2 bd-highlight"><a id="last" href="#" onclick="loadLastImage(); return false;"><i class="fa-solid fa-forward"></i></a></div>
   </div>
 
-  <div class="d-flex justify-content-center">
-    <img id="image" usemap="#map" alt=""><!-- no src, managed on javascript side -->
-  </div>
+  <img id="image" usemap="#map" alt=""><!-- no src, managed on javascript side -->
 
-  <div class="d-flex justify-content-between">
-    <div class="d-none" id="div_legend">%nn;
-      [*on this image][:]
-      <a id="rlm" href="%prefix;m=RLM" title="[*relations tree]"><img src="%image_prefix;/gui_create.png" height="18" alt="Tree"></a>
-      <ul id="legend" class="d-inline list_comma list-unstyled p-0"></ul>
-    </div>
-    <div class="d-none" id="div_unknown">%nn;
-      [*unknown person][:]%nn; <ul id="unknown" class="d-inline list_comma list-unstyled pl-0"></ul>
-    </div>
+  <div class="d-none" id="div_legend">%nn;
+    [*on this image][:]
+    <a id="rlm" href="%prefix;m=RLM" title="[*relations tree]"><img src="%image_prefix;/gui_create.png" height="18" alt="Tree"></a>
+    <ul id="legend" class="d-inline list_comma list-unstyled p-0"></ul>
+  </div>
+  <div class="d-none" id="div_unknown">%nn;
+    [*unknown person][:]%nn; <ul id="unknown" class="d-inline list_comma list-unstyled pl-0"></ul>
   </div>
 
 </div>

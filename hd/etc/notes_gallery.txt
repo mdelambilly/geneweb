@@ -12,7 +12,7 @@
   %include;hed
 </head>
 <body%body_prop;>
-<div class="container-fluid mx-2">
+<div class="container">
 <div class="small float-right mr-4 mt-2">
   (<a href="%url;&ref=on">[linked pages]</a>)
 </div>
@@ -23,10 +23,11 @@
     (<a href="%prefix;m=MOD_NOTES&f=%e.f;">[modify]</a>)
   </div>
 %end;
-<div id="description"></div>
+<div id="description">&nbsp;</div>
 
 <map id="map" name="map"></map>
-<img id="image" class="mt-1" usemap="#map" alt=""><!-- no src, managed on javascript side -->
+
+<img id="image" usemap="#map" alt=""><!-- no src, managed on javascript side -->
 <div class="d-none" id="div_legend">%nn;
   [*on this image][:]
   <a id="rlm" href="%prefix;m=RLM" title="[*relations tree]"><img src="%image_prefix;/gui_create.png" height="18" alt="Tree"></a>
@@ -83,7 +84,9 @@ $(document).ready(function() {
   $.ajax( "%url;&ajax=on" )
   .done( function( json ) {
     $("#h1").html( json.title );
-    $("#description").html( json.desc );
+    if(json.desc != "") {
+      $("#description").html( json.desc );
+    }
     if( json.path == "doc" ) {
       $("#image").attr( "src", doc_path+json.img );
     } else if( json.path == "private" ) {
