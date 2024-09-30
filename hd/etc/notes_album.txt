@@ -177,7 +177,6 @@ function loadCurrentImage() {
     cnt++;
   });
 
-  $("#image").maphilight(defaultMapHighlightSettings);
   reapplyGrouping();
 
   $(".legend").mouseover(function(e) {

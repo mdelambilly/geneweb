@@ -97,9 +97,9 @@
       <div class="p-2 bd-highlight"><a id="remove_image" href="#" onclick="removeCurrentImage(); return false;"><i class="fa-solid fa-trash-can"></i></a></div>
       <div class="p-2 bd-highlight"><a id="add_image" href="#" onclick="addImage(); return false;"><i class="fa-solid fa-plus"></i></a></div>
     </div>
-    <div id="frame" onmousedown="return false">
+    <div id="frame" style="width: fit-content;" onmousedown="return false">
       <map id="map" name="map"></map>
-      <img id="image" class="img-fluid" usemap="#map">
+      <img id="image" usemap="#map">
       <div id="selection" class="m-0 p-0"></div>
       <div id="groups" class="m-0 p-0"></div>
     </div>
