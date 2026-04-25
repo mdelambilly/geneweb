@@ -265,8 +265,8 @@ let ged_name opts base per =
   Printf.ksprintf (oc opts) "1 NAME %s /%s/\n"
     (encode opts (Mutil.nominative (ged_1st_name base per)))
     (encode opts (Mutil.nominative (Driver.sou base (Driver.get_surname per))));
-  let n = Driver.sou base (Driver.get_public_name per) in
-  if n <> "" then Printf.ksprintf (oc opts) "2 GIVN %s\n" (encode opts n);
+  Printf.ksprintf (oc opts) "2 GIVN %s\n" (encode opts (Mutil.nominative (ged_1st_name base per)));
+  Printf.ksprintf (oc opts) "2 SURN %s\n" (encode opts (Mutil.nominative (Driver.sou base (Driver.get_surname per))));
   (match Driver.get_qualifiers per with
   | nn :: _ ->
       Printf.ksprintf (oc opts) "2 NICK %s\n" (encode opts (Driver.sou base nn))
@@ -275,7 +275,12 @@ let ged_name opts base per =
   | [] -> ()
   | list ->
       let list = List.map (fun n -> encode opts (Driver.sou base n)) list in
-      Printf.ksprintf (oc opts) "2 SURN %s\n" (string_of_list list));
+      Printf.ksprintf (oc opts) "1 NAME %s\n2 TYPE aka\n" (string_of_list list));
+  let n = Driver.sou base (Driver.get_public_name per) in
+  if n <> "" then Printf.ksprintf (oc opts) "1 NAME %s\n2 TYPE public\n" (encode opts n);
+  Printf.ksprintf (oc opts) "1 GWBE \n";
+  Printf.ksprintf (oc opts) "2 OCCR %d\n" (Driver.get_occ per);
+  Printf.ksprintf (oc opts) "2 FUID %s\n" (Image.default_image_filename "portraits" base per);
   List.iter
     (fun s ->
       Printf.ksprintf (oc opts) "1 NAME %s\n" (encode opts (Driver.sou base s)))
