@@ -276,7 +276,7 @@ let reconstitute_from_fevents (nsck : bool) (empty_string : 'string)
   in
   let found_marriage :
       (Def.relation_kind
-      * Def.cdate
+      * Adef.cdate
       * 'string
       * 'string
       * 'string
@@ -286,24 +286,27 @@ let reconstitute_from_fevents (nsck : bool) (empty_string : 'string)
     ref None
   in
 
+  let found_annulation = ref false in
   let found_divorce : Def.divorce option ref = ref None in
   let mk_marr evt kind =
-    let e =
-      Some
-        ( kind,
-          evt.efam_date,
-          evt.efam_place,
-          evt.efam_note,
-          evt.efam_src,
-          evt.efam_witnesses )
-    in
-    match !found_marriage with
-    | None -> found_marriage := e
-    | Some ((NoMention | Residence), _, _, _, _, _)
-      when kind <> NoMention && kind <> Residence ->
-        found_marriage := e
-    | Some (Married, _, _, _, _, _) when kind <> Married -> ()
-    | _ -> if kind = Married then found_marriage := e
+    if !found_annulation then ()
+    else
+      let e =
+        Some
+          ( kind,
+            evt.efam_date,
+            evt.efam_place,
+            evt.efam_note,
+            evt.efam_src,
+            evt.efam_witnesses )
+      in
+      match !found_marriage with
+      | None -> found_marriage := e
+      | Some ((NoMention | Residence), _, _, _, _, _)
+        when kind <> NoMention && kind <> Residence ->
+          found_marriage := e
+      | Some (Married, _, _, _, _, _) when kind <> Married -> ()
+      | _ -> if kind = Married then found_marriage := e
   in
   let mk_div kind =
     match !found_divorce with
@@ -313,8 +316,6 @@ let reconstitute_from_fevents (nsck : bool) (empty_string : 'string)
   (* Marriage is more important than any other relation.
      For other cases, latest event is the most important,
      except for NotMention and Residence. *)
-  (* FIXME: For now, we ignore Annulation since it gives a wrong date
-     (relation on [annulation date] makes no sense) *)
   let rec loop = function
     | [] -> ()
     | evt :: l -> (
@@ -352,7 +353,9 @@ let reconstitute_from_fevents (nsck : bool) (empty_string : 'string)
         | Efam_Separated ->
             mk_div (Separated evt.efam_date);
             loop l
-        | Efam_Annulation -> loop l
+        | Efam_Annulation ->
+            found_annulation := true;
+            loop l
         | Efam_Name _ -> loop l)
   in
   loop (List.rev fevents);
@@ -369,14 +372,7 @@ let reconstitute_from_fevents (nsck : bool) (empty_string : 'string)
   let marr =
     if nsck then
       let relation, date, place, note, src = marr in
-      let relation =
-        match relation with
-        | Married -> NoSexesCheckMarried
-        | ( NotMarried | Engaged | NoSexesCheckNotMarried | NoMention
-          | NoSexesCheckMarried | MarriageBann | MarriageContract
-          | MarriageLicense | Pacs | Residence ) as x ->
-            x
-      in
+      let relation = Update_util.map_nosexcheck relation in
       (relation, date, place, note, src)
     else marr
   in
@@ -503,7 +499,7 @@ let reconstitute_family conf base nsck =
       fsources;
       fam_index;
     }
-  and cpl = Futil.parent conf.multi_parents (Array.of_list parents)
+  and cpl = Adef.parent (Array.of_list parents)
   and des = { children = Array.of_list children } in
   (fam, cpl, des, ext)
 
@@ -553,9 +549,9 @@ let check_parents conf cpl =
            (transl_nth conf "father/mother" i |> Adef.safe))
     else None
   in
-  match check Gutil.father 0 with
+  match check Adef.father 0 with
   | Some _ as err -> err
-  | None -> check Gutil.mother 1
+  | None -> check Adef.mother 1
 
 let check_family conf fam cpl :
     Update.update_error option * Update.update_error option =
@@ -812,9 +808,7 @@ let aux_effective_mod conf base nsck sfam scpl sdes fi origin_file =
     match p_getenv conf.env "psrc" with Some s -> String.trim s | None -> ""
   in
   let ncpl =
-    Futil.map_couple_p conf.multi_parents
-      (Update.insert_person conf base psrc created_p)
-      scpl
+    Adef.map_couple_p (Update.insert_person conf base psrc created_p) scpl
   in
   let nfam =
     Futil.map_family_ps
@@ -1061,7 +1055,7 @@ let is_created_or_already_there ochil_arr nchil schil =
 
 let need_check_noloop (scpl, sdes, onfs) =
   if
-    Array.exists is_a_link (Gutil.parent_array scpl)
+    Array.exists is_a_link (Adef.parent_array scpl)
     || Array.exists is_a_link sdes.children
   then
     match onfs with
@@ -1069,7 +1063,7 @@ let need_check_noloop (scpl, sdes, onfs) =
         (not
            (Mutil.array_forall2
               (is_created_or_already_there opar)
-              npar (Gutil.parent_array scpl)))
+              npar (Adef.parent_array scpl)))
         || not
              (Mutil.array_forall2
                 (is_created_or_already_there ochil)
@@ -1224,8 +1218,8 @@ let forbidden_disconnected conf scpl sdes =
   in
   if no_dec then
     if
-      get_create (Gutil.father scpl) = Update.Link
-      || get_create (Gutil.mother scpl) = Update.Link
+      get_create (Adef.father scpl) = Update.Link
+      || get_create (Adef.mother scpl) = Update.Link
     then false
     else Array.for_all (fun p -> get_create p <> Update.Link) sdes.children
   else false
@@ -1390,7 +1384,7 @@ let print_mod_aux conf base callback =
   let sfam, scpl, sdes, ext = reconstitute_family conf base nsck in
   let redisp = Option.is_some (p_getenv conf.env "return") in
   let digest =
-    let ini_sfam = UpdateFam.string_family_of conf base sfam.fam_index in
+    let ini_sfam = UpdateFam.string_family_of base sfam.fam_index in
     let salt = Option.get conf.secret_salt in
     Update.digest_family ~salt ini_sfam
   in
@@ -1529,7 +1523,7 @@ let print_change_event_order conf base =
       let fam = update_family_with_fevents conf base fam in
       Driver.patch_family base fam.fam_index fam;
       let a = Driver.foi base fam.fam_index in
-      let cpl = Futil.parent conf.multi_parents (Driver.get_parent_array a) in
+      let cpl = Adef.parent (Driver.get_parent_array a) in
       let des = { children = Driver.get_children a } in
       let wl =
         let wl = ref [] in

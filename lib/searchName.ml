@@ -5,7 +5,7 @@ open Util
 module Sosa = Geneweb_sosa
 module Driver = Geneweb_db.Driver
 module Gutil = Geneweb_db.Gutil
-module IperSet = Driver.Iper.Set
+module Iper = Driver.Iper
 
 let src = Logs.Src.create ~doc:"SearchName" __MODULE__
 
@@ -492,7 +492,7 @@ let rec search_surname conf base x =
         ([], phonetic_results)
 
 and search_exact conf base variants =
-  let exact_iperl = ref IperSet.empty in
+  let exact_iperl = ref Iper.Set.empty in
   List.iter
     (fun variant ->
       try
@@ -505,23 +505,23 @@ and search_exact conf base variants =
           (fun (str, _, iperl) ->
             if Name.lower str = Name.lower variant then
               List.iter
-                (fun ip -> exact_iperl := IperSet.add ip !exact_iperl)
+                (fun ip -> exact_iperl := Iper.Set.add ip !exact_iperl)
                 iperl)
           list
       with _ -> ())
     variants;
-  IperSet.elements !exact_iperl
+  Iper.Set.elements !exact_iperl
 
 and search_phonetic_generic conf base query base_strings spi_find _get_name =
   try
     let istrl = base_strings base query in
-    let ddr_iperl = ref IperSet.empty in
+    let ddr_iperl = ref Iper.Set.empty in
     List.iter
       (fun istr ->
         let iperl = spi_find istr in
         List.iter
           (fun ip ->
-            if not (IperSet.mem ip !ddr_iperl) then
+            if not (Iper.Set.mem ip !ddr_iperl) then
               let p = Driver.poi base ip in
               if
                 (not (Driver.Istr.is_empty (Driver.get_first_name p)))
@@ -529,10 +529,10 @@ and search_phonetic_generic conf base query base_strings spi_find _get_name =
                 && not
                      (Util.is_hide_names conf p
                      && not (Util.authorized_age conf base p))
-              then ddr_iperl := IperSet.add ip !ddr_iperl)
+              then ddr_iperl := Iper.Set.add ip !ddr_iperl)
           iperl)
       istrl;
-    IperSet.elements !ddr_iperl
+    Iper.Set.elements !ddr_iperl
   with _ -> []
 
 and search_phonetic conf base query =
@@ -974,7 +974,6 @@ let search_fullname conf base fn sn =
       k "      search_fullname: %d results" (List.length persons));
   match persons with
   | [] -> { exact = []; partial = []; spouse = [] }
-  | [ p ] -> { exact = [ Driver.get_iper p ]; partial = []; spouse = [] }
   | pl ->
       let opts =
         { order = false; exact1 = true; incl_aliases = false; absolute = false }
@@ -1320,18 +1319,20 @@ let dispatch_search_methods conf base query search_order fn_options =
 
 let rec handle_search_results conf base query fn_options components specify
     results =
+  let redirect_to_person ip =
+    record_visited conf ip;
+    let p = Driver.poi base ip in
+    Geneweb_http.Server.http_redirect_temporarily
+      (Adef.(Util.commd conf ^^^ Util.acces conf base p) :> string)
+  in
   let { exact; partial; spouse } = results in
   match exact with
-  | [ single_exact ] ->
-      record_visited conf single_exact;
-      Perso.print conf base (Driver.poi base single_exact)
+  | [ single_exact ] -> redirect_to_person single_exact
   | _ -> (
       let all_persons = exact @ partial @ spouse in
       match all_persons with
       | [] -> SrcfileDisplay.print_welcome conf base
-      | [ single_person ] ->
-          record_visited conf single_person;
-          Perso.print conf base (Driver.poi base single_person)
+      | [ single_person ] -> redirect_to_person single_person
       | _multiple_persons -> (
           let exact_persons = List.map (Driver.poi base) exact in
           let partial_persons = List.map (Driver.poi base) partial in
@@ -1349,9 +1350,7 @@ let rec handle_search_results conf base query fn_options components specify
                 spouse_persons
           | ParsedName { format = `Space; _ }
             when fn_options.exact1 && List.length exact_persons = 1 ->
-              let person = List.hd exact_persons in
-              record_visited conf (Driver.get_iper person);
-              Perso.print conf base person
+              redirect_to_person (Driver.get_iper (List.hd exact_persons))
           | _ ->
               specify conf base query exact_persons partial_persons
                 spouse_persons))

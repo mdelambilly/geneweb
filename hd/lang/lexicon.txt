@@ -1954,6 +1954,18 @@ sl: dodaj %tv podatke/počisti podatke/pokaži graf/uredi podatke
 sv: lägg till %tpå datan/rensa datan/visa grafen/redigera datan
 tr: veriye %tekle/veriyi temizle/grafiği göster/veriyi düzenle
 
+    choose a folder
+en: choose a folder
+fr: choisir un dossier
+
+    choose a file or a folder
+en: choose a file or a folder
+fr: choisir un fichier ou un dossier
+
+    folder/folders
+en: folder/folders
+fr: dossier/dossiers
+
     adhesion
 co: adesione
 de: Beitritt
@@ -2214,6 +2226,11 @@ sv: livslängd
 tr: ölüm yaşı
 zh: 享年
 
+    age at marriage
+de: Alter bei der Heirat
+en: age at marriage
+fr: âge au mariage
+
     aged
 af: ouderdom by afsterwe
 bg: на възраст
@@ -2246,6 +2263,11 @@ sl: živel(a)
 sv: livslängd
 tr: ölüm yaşı
 zh: 享年
+
+    ages of spouses
+de: Alter der Ehepartner
+en: ages of spouses
+fr: âges des conjoints
 
     alert module
 co: Modulu inaccettevule <strong id="alert-module-2"></strong>. Ci vole à stampittà un’iniziale du modulu accettevule.
@@ -3795,6 +3817,11 @@ pt: ambos
 sv: både
 tr: her ikisi de
 
+    caution: these persons are lost when exporting with gwu without the -isolated option
+de: Achtung: diese Personen gehen beim Export mit gwu ohne die Option -isolated verloren
+en: caution: these persons are lost when exporting with gwu without the -isolated option
+fr: attention : ces personnes sont perdues à l’export gwu sans l’option -isolated
+
     compiled on
 af: saamgestel op
 ar: تم تجميعه في
@@ -3864,7 +3891,7 @@ sl: od zaveze id
 sv: från commit id
 tr: kayıt kimliğinden
 zh: 从提交 ID
-    
+
     branch %s compiled on %s from commit
 af: tak %s saamgestel op %s vanaf commit id
 ar: فرع %s تم تجميعه في %s من commit %s
@@ -4738,6 +4765,11 @@ de: einen Vorfahren auswählen
 en: choose an ancestor
 fr: choisir un ancêtre
 
+    choose an image
+de: ein Bild auswählen
+en: choose an image
+fr: choisir une image
+
     circumcision
 co: circuncisione
 de: Beschneidung
@@ -4920,6 +4952,11 @@ de: Der <a href="https://de.wikipedia.org/wiki/Verwandtschaftskoeffizient">Verwa
 en: The <a href="https://en.wikipedia.org/wiki/Coefficient_of_relationship">coefficient of relationship</a> gives the minimum average percentage of shared DNA between two individuals.
 fr: Le <a href="https://en.wikipedia.org/wiki/Coefficient_of_relationship">coefficient de parenté</a> indique le pourcentage moyen minimum de gènes partagés entre deux individus.
 
+    half-disc/standard/double half-disc
+de: Halbscheibe/Standard/doppelte Halbscheibe
+en: half-disc/standard/double half-disc
+fr: demi-disque/standard/double demi-disque
+
     collapse implex
 co: ripiegà l’implessi
 de: Implex zusammenklappen
@@ -4928,6 +4965,11 @@ fr: réduire les implexes
 pt: reduzir os implexos
 sv: slå ihop implex
 tr: implex daraltma
+
+    colorize places
+de: Orte einfärben (Ereignisse durchlaufen)
+en: colorize places (cycle through events)
+fr: colorisation des lieux (cycle entre les événements)
 
     color
 af: kleur
@@ -4966,6 +5008,36 @@ co: un scornu culuritu indicheghja l’esistenza di nota (turchinu), di fonte (g
 de: Eine farbige Ecke zeigt das Vorhandensein von Notizen (blau), Quellen (gelb) oder beidem (grün) für ein Ereignis an. Die Daten können dann in einem Popup angezeigt werden, indem man auf den Hintergrund der Zellen klickt.
 en: a colored corner shows the existence of notes (blue), sources (yellow) or both (green) for an event. The data are then displayable in a pop-up by clicking on the background of cells.
 fr: un coin coloré indique l’existence de notes (bleu), sources (jaune) ou des deux (vert) pour un événement. Ces données sont ensuite affichables dans une fenêtre surgissante en cliquant sur le fond des cases.
+
+    first
+af: eerste
+bg: първи
+br: kentañ
+ca: primer
+cs: první
+da: første
+de: erste
+en: first
+eo: unua
+es: primero
+et: esimene
+fi: ensimmäinen
+fr: premier
+he: ראשון
+is: fyrst
+it: primo
+lv: pirmais
+lt: pirmas
+nl: eerste
+no: første
+oc: primièr
+pl: pierwszy
+pt: primeiro
+ro: primul
+ru: первый
+sl: prvi
+sv: första
+zh: 第一
 
     first common ancestor
 af: eerste gemeenskaplike voorvader/eerste gemeenskaplike voorvaders
@@ -6930,7 +7002,7 @@ ru: кремация
 sv: kremering
 tr: ölü yakma
 
-current value
+    current value
 bg: текуща стойност
 br: talvoud red
 ca: valor actual
@@ -6954,6 +7026,13 @@ pt: valor atual
 pt-br: valor atual
 ru: текущее значение
 sv: nuvarande värde
+
+    chronicle
+de: Chronik
+en: chronicle
+es: crónica
+it: cronaca
+fr: chronique
 
     custom event
 co: evenimentu persunalizatu
@@ -7261,6 +7340,11 @@ sk: úmrtie
 sl: smrti
 sv: död
 tr: ölüm
+
+    death ages and marriage duration
+de: Sterbealter und Ehedauer
+en: death ages and marriage duration
+fr: âges décès et durées mariage
 
     death/deaths
 af: dood/dooie
@@ -7585,7 +7669,6 @@ sk: popis
 sl: opis
 sv: beskrivning
 tr: açıklama
-
 
     died
 af: oorlede
@@ -8429,6 +8512,11 @@ ru: событие/события
 sv: händelse/Händelse
 tr: etkinlik/etkinlikler
 
+    event/events for this place
+de: Ereignis für diesen Ort/Ereignisse für diesen Ort
+en: event for this place/events for this place
+fr: événement pour ce lieu/événements pour ce lieu
+
     events to which %s was witness
 co: evenimenti induve %s era testimoniu
 de: Ereignisse, von denen %s Zeuge war
@@ -8650,7 +8738,7 @@ tr: aile silindi
     family history
 co: accant’à l’arburu
 de: rund um den Stammbaum
-en: family History
+en: family history
 es: acerca del árbol
 fi: sukupuun lisäksi
 fr: autour de l’arbre
@@ -8782,6 +8870,76 @@ co: arburu in banderetta
 de: Fächerbaum
 en: fanchart
 fr: arbre en éventail
+
+    appears/time/times
+de: erscheint/Mal/Male
+en: appears/time/times
+fr: apparaît/fois/fois
+
+    duration
+de: Dauer
+en: duration
+fr: durée
+
+    font/default/large/readable
+de: Schriftart/Standard/groß/lesbar
+en: font/default/large/readable
+fr: police/défaut/grande/lisible
+
+    view/opening
+de: Ansicht/Öffnungswinkel
+en: view/opening angle
+fr: vue/ouverture
+
+    no information available
+de: keine Informationen verfügbar
+en: no information available
+fr: aucune information disponible
+
+    no known parents
+de: keine bekannten Eltern
+en: no known parents
+fr: aucun parent connu
+
+    no marriage in this duration range
+de: keine Ehe in diesem Dauerbereich
+en: no marriage in this duration range
+fr: aucun mariage dans cette tranche de durée
+
+    no person in this age range
+de: keine Person in dieser Altersgruppe
+en: no person in this age range
+fr: aucune personne dans cette tranche d’âge
+
+    number the implex
+de: Implex nummerieren
+en: number the implex
+fr: numéroter les implexes
+
+    place/places out of screen
+de: Ort außerhalb des Bildschirms/Orte außerhalb des Bildschirms
+en: place out of screen/places out of screen
+fr: lieu hors écran/lieux hors écran
+
+    recenter tree on
+de: Baum neu zentrieren auf
+en: recenter tree on
+fr: recentrer l’arbre sur
+
+    show all ancestors
+de: alle Vorfahren anzeigen
+en: show all ancestors
+fr: afficher tous les ancêtres
+
+    show controls
+de: Steuerung anzeigen
+en: show controls
+fr: afficher les contrôles
+
+    with places
+de: mit Orten
+en: with places
+fr: avec lieux
 
     father-in-law/mother-in-law
 af: skoonpa/skoonma
@@ -9292,6 +9450,34 @@ de: vom Karussell
 en: from carrousel
 fr: du carrousel
 
+    from/to (date year)
+bg: от/до
+co: da/à
+cs: od/do
+da: fra/til
+de: von/bis
+en: from/to
+eo: de/ĝis
+es: de/a
+et: alates/kuni
+fi: alkaen/asti
+fr: de/à
+he: מ/עד
+it: da/a
+lt: nuo/iki
+lv: no/līdz
+nl: van/tot
+no: fra/til
+oc: de/a
+pl: od/do
+pt: de/a
+ro: de la/până la
+ru: от/до
+sk: od/do
+sl: od/do
+sv: från/till
+tr: itibaren/kadar
+
     from the %s (gen)
 af: van die %s
 ar: من الـ%s
@@ -9780,9 +9966,9 @@ tr: üvey erkek kardeşler/üvey kız kardeşler/üvey kardeşler
 
     half-relationship
 co: mezu/meza/mezi
-de: halb-/halb-/halb-/
-en: half-/half-/half-/ 
-fr: demi-/demi-/demi-/ 
+de: halb-/halb-/halb-
+en: half-/half-/half-
+fr: demi-/demi-/demi-
 
     half-siblings
 co: fratellastri è surellastre
@@ -9914,6 +10100,11 @@ pt: não tem cônjuge nem filhos
 ru: супруг(а) и дети не известы
 sv: har ingen familj
 tr: eş ve çocuklar bilinmiyor
+
+    help and shortcuts
+de: Hilfe und Tastenkürzel
+en: help and shortcuts
+fr: aide et raccourcis
 
     help merge
 co: s’è nisuna hè selezziunata, e duie entrate seranu cuncatinate
@@ -11340,6 +11531,11 @@ sl: je rojen po tem, ko je imel otroka/je rojena po tem, ko je imela otroka
 sv: är född efter sitt barn
 tr: çocuğundan sonra doğmuş
 
+    isolated persons/totally isolated/linked by relation/witness to an event
+de: isolierte Personen/völlig isoliert/durch Beziehung verknüpft/Zeuge bei einem Ereignis
+en: isolated persons/totally isolated/linked by relation/witness to an event
+fr: personnes isolées/totalement isolées/liées par relation/témoin à un événement
+
     it is the same person!
 af: is dieselfde persoon!
 bg: това е същият човек!
@@ -11463,6 +11659,36 @@ pt: etiqueta
 sv: etikett
 tr: etiket
 
+    last
+af: laaste
+bg: последен
+br: diwezhañ
+ca: últim
+cs: poslední
+da: sidste
+de: letzte
+en: last
+eo: lasta
+es: último
+et: viimane
+fi: viimeinen
+fr: dernier
+he: אחרון
+is: síðast
+it: ultimo
+lv: pēdējais
+lt: paskutinis
+nl: laatste
+no: siste
+oc: darrièr
+pl: ostatni
+pt: último
+ro: ultimul
+ru: последний
+sl: zadnji
+sv: sista
+zh: 最后
+
     last diff
 co: ultima revisione
 de: letzte Revision
@@ -11547,6 +11773,10 @@ sk: mladší ako jeden mesiac
 sl: star manj kot en mesec/stara manj kot en mesec
 sv: mindre än en månad
 tr: bir aydan kısa bir süre eski
+
+    life expectancy
+en: life expectancy
+fr: espérance de vie
 
     limit
 co: limita
@@ -11684,17 +11914,39 @@ sv: länkade bilder
 tr: bağlantılı resimler
 zh: 关联图像
 
-    linked albums help
-co: albumi o gallerie induve a persona hè referenzata
-de: Alben oder Gallerien, wo die Person verlinkt ist
-en: albums or galleries where person is referenced
-fr: albums ou galleries où la personne est citée
+    reorder images
+en: reorder images
+fr: réordonner les images
 
-    linked albums
-co: albumi o gallerie ligati
-de: verlinkte Alben oder Gallerien
-en: linked albums or galleries
-fr: albums ou galleries liés
+    thumbnail
+en: thumbnail
+fr: vignette
+
+    linked galleries
+co: gallerie ligate
+de: verknüpfte Galerien
+en: linked galleries
+fr: galeries liées
+
+    linked galleries help
+co: gallerie induve a persona appare
+de: Galerien, in denen die Person erscheint
+en: galleries where the person appears
+fr: galeries où la personne apparaît
+
+    gallery
+en: images gallery
+fr: galerie d’images
+
+    gallery backlinks
+en: pages where this gallery appears
+fr: pages où cette galerie apparaît
+
+    gallery index
+co: indice di a galleria
+de: Galerieübersicht
+en: gallery index
+fr: index de la galerie
 
     linked pages (pages) help
 co: pagine o note induve a pagina hè referenzata
@@ -11923,6 +12175,11 @@ pt: vivo/a de/até
 ru: жил(а) с %s по %s
 sv: lever från/till
 tr: yaşamış/için
+
+    loading/error
+de: Ladevorgang läuft…/Ladefehler
+en: loading in progress…/loading error
+fr: chargement en cours…/erreur de chargement
 
     lock group
 en: lock this group
@@ -13128,10 +13385,10 @@ en: modify the section %d
 fr: modifier la section %d
 
     modify gallery
-co: mudificà a fiura (galleria)
-de: das Bild ändern (die Gallerie)
-en: modify the image (gallery)
-fr: modifier l'image (gallerie)
+co: mudificà a fiura&#047;galleria
+de: das Bild ändern&#047;die Gallerie
+en: modify the image&#047;the gallery
+fr: modifier l’image&#047;la gallerie
 
     modify person event order
 co: intervertisce l’evenimenti individuali
@@ -14156,6 +14413,10 @@ sl: brez poroke
 sv: ogifta
 tr: evli değil
 
+    document/documents
+en: document/documents
+fr: document/documents
+
     note/notes
 af: nota/notas
 ar: بطاقة/بطاقات
@@ -14375,6 +14636,21 @@ de: Führen Sie das Tool <code><b>update_nldb</b></code> aus<br>oder <b>löschen
 en: Run <code><b>update_nldb</b></code> tool or <b>delete notes_links</b> file.
 fr: Relancez l’outil <code><b>update_nldb</b></code><br> ou <b>supprimez</b> le fichier <b>notes_links</b>.
 
+    NOTIF_TT bad date
+de: Ungültiges Datum
+en: Invalid date
+fr: Date invalide
+
+    NOTIF bad date corrected
+de: Das eingegebene Datum wurde automatisch korrigiert.
+en: The entered date has been automatically corrected.
+fr: La date saisie a été automatiquement corrigée.
+
+    NOTIF bad date
+de: Das Jahr 0 existiert nicht in diesem Kalender.
+en: Year 0 does not exist in this calendar.
+fr: L’année 0 n’existe pas dans ce calendrier.
+
     nth
 af: n-de/1ste/2de/3de/4de/5de/6de/7de/8ste/9de/10de/11de/12de/13de/14de/15de/16de/17de/18de/19de/20ste/21ste/22ste/23ste/24ste/25ste/26ste/27ste/28ste/29ste/30de/31ste/32ste/33ste/34ste/35ste/36ste/37ste/38ste/39ste/40ste/41ste/42ste/43ste/44ste/45ste/46ste/47ste/48ste/49ste/50ste/51ste/52ste/53ste/54ste/55ste/56ste/57ste/58ste/59ste/60ste/61ste/62ste/63ste/64ste/65ste/66ste/67ste/68ste/69ste/70ste/71ste/72ste/73ste/74ste/75ste/76ste/77ste/78ste/79ste/80ste/81ste/82ste/83ste/84ste/85ste/86ste/87ste/88ste/89ste/90ste/91ste/92ste/93ste/94ste/95ste/96ste/97ste/98ste/99ste
 bg: n-ти/първи/втори/трети/четвърти/пети/шести/седми/осми/девети/десети/единадесети/дванадесети/тринадесети/четиринадесети/петнадесети/шестнадесети/седемнадесети/осемнадесети/деветнадесети/двадесети/21-и/22-и/23-и/24-и/25-и/26-и/27-и/28-и/29-и/30-и/31-и/32-и/33-и/34-и/35-и/36-и/37-и/38-и/39-и/40-и/41-и/42-и/43-и/44-и/45-и/46-и/47-и/48-и/49-и/50-и/51-и/52-и/53-и/54-и/55-и/56-и/57-и/58-и/59-и/60-и/61-и/62-и/63-и/64-и/65-и/66-и/67-и/68-и/69-и/70-и/71-и/72-и/73-и/74-и/75-и/76-и/77-и/78-и/79-и/80-и/81-и/82-и/83-и/84-и/85-и/86-и/87-и/88-и/89-и/90-и/91-и/92-и/93-и/94-и/95-и/96-и/97-и/98-и/99-и
@@ -14570,6 +14846,34 @@ ru: количество событий
 sv: antal händelser
 tr: etkinliklerin sayısı
 
+    number of deceased persons
+bg: брой на починалите лица
+co: numeru di persone morte
+cs: počet zemřelých osob
+da: antal afdøde personer
+de: Anzahl der verstorbenen Personen
+en: number of deceased individuals
+eo: nombro de la mortintaj personoj
+es: número de personas fallecidas
+et: surnud isikuid
+fi: kuolleiden lukumäärä
+fr: nombre d'individus décédés
+he: מספר הנפטרים
+it: numero di persone decedute
+lt: mirusiųjų skaičius
+lv: mirušo personu skaits
+nl: aantal overleden personen
+no: antall avdøde personer
+oc: nombre de personas defuntas
+pl: liczba osób zmarłych
+pt: número de pessoas falecidas
+ro: numărul de persoane decedate
+ru: количество умерших персон
+sk: počet zosnulých osôb
+sl: število umrlih oseb
+sv: antal avlidna personer
+tr: vefat eden bireylerin sayısı
+
     number of living persons
 bg: брой на живите лица
 co: numeru di persone vive
@@ -14603,6 +14907,10 @@ co: numeru di linee
 de: Zeilennummer
 en: number of rows
 fr: nombre de lignes
+
+    number of unions
+en: number of unions
+fr: nombre de relations
 
     n° d’Aboville
 co: n° d’Aboville
@@ -15542,8 +15850,42 @@ tr: aynı adı taşıyan kişiler
 
     phonetic variants
 de: Phonetische Varianten
-en: phonétic variants
+en: phonetic variants
 fr: variantes phonétiques
+
+    data quality
+en: data quality
+fr: qualité des données
+
+    description
+af: beskrywing
+bg: описание
+br: deskrivadur
+ca: descripció
+cs: popis
+da: beskrivelse
+de: Beschreibung
+en: description
+eo: priskribo
+es: descripción
+et: kirjeldus
+fi: kuvaus
+fr: description
+he: תיאור
+is: lýsing
+it: descrizione
+lv: apraksts
+lt: aprašymas
+nl: beschrijving
+no: beskrivelse
+oc: descripcion
+pl: opis
+pt: descrição
+ro: descriere
+ru: описание
+sl: opis
+sv: beskrivning
+zh: 描述
 
     disordered firstnames
 de: ungeordnete Vornamen
@@ -15577,6 +15919,11 @@ co: numeru d’elementi cunservati in a lista di i lochi
 de: Anzahl der Elemente in der Ortsliste
 en: number of elements kept in places list
 fr: nombre d'éléments à conserver dans la liste des places
+
+    places and events
+de: Orte & Ereignisse
+en: places & events
+fr: lieux & événements
 
     place/places
 af: plek
@@ -15659,6 +16006,34 @@ sk: populačná pyramída
 sl: populacijska piramida
 sv: befolkningspyramid
 tr: nüfus piramidi
+
+    death pyramid
+bg: пирамида на възрастта при смъртта
+co: piramida di l'età à a morte
+cs: pyramida věku při úmrtí
+da: dødspyramide
+de: Sterbealter-Pyramide
+en: death age pyramid
+eo: piramido de mortaĝo
+es: pirámide de edad al fallecer
+et: surmapüramiid
+fi: kuolinpyramidi
+fr: pyramide des âges au décès
+he: פירמידת גיל פטירה
+it: piramide dell'età al decesso
+lt: mirties amžiaus piramidė
+lv: nāves vecuma piramīda
+nl: piramide overlijdensleeftijd
+no: dødspyramide
+oc: piramida de las edats al decòs
+pl: piramida wieku zgonu
+pt: pirâmide de idade ao óbito
+ro: piramida vârstei la deces
+ru: пирамида возраста смерти
+sk: pyramída veku pri úmrtí
+sl: piramida starosti ob smrti
+sv: dödsålderspyramid
+tr: ölüm yaşı piramidi
 
     portrait
 co: ritrattu
@@ -16680,6 +17055,11 @@ fr: retirer le dernier module ajouté
 pt: remover o último módulo adicionado
 sv: tag bort senast tillagda modul
 tr: son eklenen modülü kaldır
+
+    add/remove one generation
+de: eine Generation hinzufügen/eine Generation entfernen
+en: add one generation/remove one generation
+fr: ajouter une génération/retirer une génération
 
     reserved to friends or wizards
 co: riservatu à l’amichi è à i maghi
@@ -17841,6 +18221,16 @@ sl: kratek seznam
 sv: kort rapport
 tr: kısa ekran
 
+    drag/wheel/hover/lock/rotate
+de: Ziehen: verschieben/Rad: zoomen/Zeigen: Details/Klick Ort: fixieren/Rechtsklick: drehen (360°)
+en: drag: move/wheel: zoom/hover: details/click place: lock/right-drag: rotate (360°)
+fr: glisser : déplacer/molette : zoomer/survol : détails/clic lieu : verrouiller/clic droit : pivoter (360°)
+
+    click sheet/navigate
+de: Klick: Personenseite/Klick ▲: zum Vorfahren
+en: click: individual sheet/click ▲: navigate
+fr: clic : fiche individuelle/clic ▲ : naviguer
+
     shortcuts
 co: accurtatoghji di tastera
 de: Tastaturkürzel
@@ -17946,6 +18336,11 @@ sl: bi morala biti moški
 sv: borde vara man
 tr: erkek olmalı
 
+    show panel
+de: Seitenleiste anzeigen
+en: show panel
+fr: afficher le panneau
+
     show all
 co: affissà tutti i
 de: zeige alle
@@ -18043,7 +18438,7 @@ tr: son tıklamadan bu yana
 co: scala
 de: Größe
 en: scale
-fr: echelle
+fr: échelle
 pt: escala
 sv: skala
 tr: ölçek
@@ -20059,6 +20454,10 @@ sl: za prikaz prve sorodstvene povezave
 sv: för att se den första
 tr: i̇lkini görmek için
 
+    type
+en: type
+fr: type
+
     upto the %s generation
 af: tot die %s geslag
 bg: до %s поколение
@@ -20952,7 +21351,7 @@ ca: validar/eliminar
 co: validà/squassà
 cs: ovìøit/výmaz
 da: valider/slet
-de: Bestätigen/Verwerfen
+de: bestätigen/löschen
 en: submit/delete
 es: validar/borrar
 et: kinnita/kustuta
@@ -21296,13 +21695,12 @@ en: without implex display
 fr: sans afficher les implexes
 
     witness at %s of
-co: testimone à u %s di
-de: Zeuge bei %s von
-en: witness at %s of
-fr: témoin au %s de
-pt: testemunha de %s de
-sv: vittne vid %s av
-tr: %s tanık
+co: %s à u %s di
+de: %s bei %s von
+en: %s at %s of
+fr: %s au %s de
+pt: %s de %s de
+sv: %s vid %s av
 
     witness at marriage of %s and %s
 af: getuie by die troue van %s met %s
@@ -21549,7 +21947,7 @@ eo: jaro/monato/tago
 es: año/mes/día
 et: aasta/kuu/päev
 fi: vuosi/kuukausi/päivä
-fr: année/mois/jour/an
+fr: an/mois/jour/an
 he: שנה/ חודש/ יום
 is: ár/mánuður/dagur
 it: anno/mese/giorno

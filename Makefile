@@ -11,6 +11,11 @@ endif
 
 -include Makefile.local
 
+.PHONY: info refresh-version fmt build build-geneweb build-geneweb-rpc gwd \
+        install uninstall distrib distrib-rpc doc opendoc test bench \
+        bench-marshal bench-tabulate clean ci ocp-indent help bundle \
+        dmg clean-bundle
+
 # Variables for packagers.
 DISTRIB_DIR=distribution
 BUILD_DIR=_build/default
@@ -38,22 +43,20 @@ ifneq ($(COMMIT_COMMENT),)
 	@printf '\n$(subst ','\'',$(COMMIT_COMMENT))' | fmt -w 80
 endif
 	@printf '\n\033[1;1mGenerating configuration files\033[0m\n'
-.PHONY: info
 
-fmt build build-geneweb gwd install uninstall: info
+refresh-version:
+	@rm -f _build/default/lib/version.ml
+
+fmt build build-geneweb gwd distrib install uninstall: info refresh-version
 
 fmt: ## Format Ocaml code
 	@printf "\n\033[1;1mOcamlformat\033[0m\n"
 	dune build @fmt --auto-promote
 
-.PHONY: clean-version
-clean-version:
-	@rm -f $(BUILD_DIR)/lib/version.ml
-
-build: clean-version
+build:
 	dune build
 
-build-geneweb: clean-version ## Build the geneweb package (libraries and binaries)
+build-geneweb: ## Build the geneweb package (libraries and binaries)
 	@printf "\n\033[1;1mBuilding executables\033[0m\n"
 	dune build @bin/all @lib/all
 	@printf "Done."
@@ -63,7 +66,7 @@ build-geneweb-rpc: ## Build the geneweb-rpc package
 	dune build @rpc/all
 	@printf "Done."
 
-gwd: clean-version ## Build ondy gwd/gwc executables
+gwd: ## Build ondy gwd/gwc executables
 	@printf "\n\033[1;1mBuilding only gwd and gwc executables\033[0m\n"
 	dune build bin/gwd bin/gwc
 	@printf "Done."
@@ -71,13 +74,12 @@ gwd: clean-version ## Build ondy gwd/gwc executables
 install: ## Install geneweb using dune
 	dune build @install
 	dune install
-.PHONY: install
 
 uninstall: ## Uninstall geneweb using dune
 	dune build @install
 	dune uninstall
 
-distrib: info ## Build the project and copy what is necessary for distribution
+distrib: ## Build the project and copy what is necessary for distribution
 	dune build --release @bin/all @lib/all
 	@printf "Done.\n"
 	@rm -rf $(DISTRIB_DIR)
@@ -106,9 +108,6 @@ else
 endif
 	mkdir $(DISTRIB_DIR)/gw
 	cp etc/a.gwf $(DISTRIB_DIR)/gw/.
-	echo "-setup_link" > $(DISTRIB_DIR)/gw/gwd.arg
-	echo "-bd" >> $(DISTRIB_DIR)/gw/gwd.arg
-	echo "./bases" >> $(DISTRIB_DIR)/gw/gwd.arg
 	@printf "\n\033[1;1m└ Copy binaries in $(DISTRIB_DIR)/gw/\033[0m\n"
 	cp $(BUILD_DISTRIB_DIR)connex/connex.exe $(DISTRIB_DIR)/gw/connex$(EXT)
 	cp $(BUILD_DISTRIB_DIR)consang/consang.exe $(DISTRIB_DIR)/gw/consang$(EXT)
@@ -127,9 +126,12 @@ endif
 	cp -R hd/* $(DISTRIB_DIR)/gw/
 	rm $(DISTRIB_DIR)/gw/dune
 	rm $(DISTRIB_DIR)/gw/etc/js/checkdata.js
+	rm $(DISTRIB_DIR)/gw/etc/js/fanchart.js
+	rm $(DISTRIB_DIR)/gw/etc/js/init_gallery.js
+	rm $(DISTRIB_DIR)/gw/etc/js/maphilight.js
+	rm $(DISTRIB_DIR)/gw/etc/js/notes_upd_gallery.js
 	rm $(DISTRIB_DIR)/gw/etc/js/p_mod.js
 	rm $(DISTRIB_DIR)/gw/etc/js/relationmatrix.js
-	rm $(DISTRIB_DIR)/gw/etc/js/fanchart.js
 	@printf "\n\033[1;1m└ Compressing large JS/CSS assets\033[0m\n"
 	@for f in $(DISTRIB_DIR)/gw/etc/js/*.min.js; do \
 	  if [ -f "$$f" ] && [ $$(stat -c%s "$$f" 2>/dev/null || stat -f%z "$$f") -gt 4500 ]; then \
@@ -183,28 +185,22 @@ distrib-rpc: build-geneweb-rpc
 	gzip -9 -k -f $(DISTRIB_DIR)/gw/etc/js/rpc_client.min.js
 	@echo "Done."
 
-.PHONY: build build-geneweb build-geneweb-rpc gwd fmt install uninstall distrib
-
 # [END] Installation / Distribution section
 
 doc: ## Documentation generation
 doc:
 	dune build @doc
-.PHONY: doc
 
 opendoc: doc
 	xdg-open $(ODOC_DIR)/index.html
-.PHONY: opendoc
 
 test: ## Run tests
 test:
 	@dune build @runtest
-.PHONY: test
 
 bench: ## Run benchmarks
 bench:
 	dune build @runbench
-.PHONY: bench
 
 BENCH_FILE?=geneweb-bench.bin
 
@@ -215,20 +211,17 @@ ifdef BENCH_NAME
 else
 	 $(error BENCH_NAME variable is empty)
 endif
-.PHONY: bench-marshal
 
 bench-tabulate: ## Read BENCH_FILE and print a report
 bench-tabulate:
 	dune exec benchmark/bench.exe -- --tabulate ${BENCH_FILE}
 	@rm -f $(BENCH_FILE)
-.PHONY: bench-tabulate
 
 clean:
 	@echo -n "Cleaning…"
 	@rm -rf $(DISTRIB_DIR)
 	@rm -rf _build
 	@echo " Done."
-.PHONY: clean
 
 ci: ## Run tests, skip known failures
 ci:
@@ -240,13 +233,11 @@ ocp-indent:
 		echo $$f ; \
 		ocp-indent -i $$f ; \
 	done
-.PHONY: ocp-indent
 
 .DEFAULT_GOAL := help
 help:
 	@clear;grep -E '(^[a-zA-Z_-]+:.*?##.*$$)|(^##)' Makefile | awk 'BEGIN {FS = ":.*?#\
 # "}; {printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' | sed -e 's/\[32m## /[33m/'
-.PHONY: help
 
 bundle: distrib ## Create macOS app bundle
 ifeq ($(OS_TYPE),Darwin)
@@ -260,7 +251,6 @@ ifeq ($(OS_TYPE),Darwin)
 else
 	@echo "❌ Bundle creation is only supported on macOS"
 endif
-.PHONY: bundle
 
 dmg: bundle ## Create macOS DMG installer
 ifeq ($(OS_TYPE),Darwin)
@@ -274,7 +264,6 @@ ifeq ($(OS_TYPE),Darwin)
 else
 	@echo "❌ DMG creation is only supported on macOS"
 endif
-.PHONY: dmg
 
 clean-bundle: ## Remove generated bundle and DMG
 	@echo "Cleaning macOS artifacts…"
@@ -282,4 +271,3 @@ clean-bundle: ## Remove generated bundle and DMG
 	@rm -f GeneWeb-*.dmg
 	@rm -f install_geneweb.sh
 	@echo "Done."
-.PHONY: clean-bundle

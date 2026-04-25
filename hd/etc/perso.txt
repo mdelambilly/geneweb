@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="%lang;">
 <head>
-  <!-- $Id: perso.txt %version; 08/12/2023 23:04:39 $ -->
+  <!-- $Id: perso.txt %version; 04/04/2026 04:04:32 $ -->
   <!-- Copyright (c) 1998-2007 INRIA -->
   <title>%nn;
     %if;has_public_name;
@@ -14,7 +14,7 @@
   </title>
   %if;(bvar.robot_index="yes")<meta name="robots" content="index,follow">%else;<meta name="robots" content="none">%end;
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="%images_prefix;favicon_gwd.png">
   <link rel="apple-touch-icon" href="%images_prefix;favicon_gwd.png">
   %include;css
@@ -22,7 +22,7 @@
 <body%body_prop;>
 %include;hed
 %message_to_wizard;
-<a href="#content" class="sr-only sr-only-focusable ml-4">[*skip to main content]</a>
+<a href="#content" class="visually-hidden visually-hidden-focusable ms-4">[*skip to main content]</a>
 <div class="container%if;(evar.wide="on")-fluid%end;">
 %include;perso_utils
 %include;menubar
@@ -32,23 +32,32 @@
 %if;(evar.p_mod="zz" or (bvar.p_mod="zz" and evar.p_mod="") or
     (bvar.p_mod="" and evar.p_mod=""))
   %(Statique%)
- <div class="row">
-    %(be carefull h1 is col-12 for full width then an opening <div class="col-8"> in individu.txt %)
+  <div class="row col-12">
+      %let;op_m;3%in;%include;modules/heading
+  </div>
+  <div class="row col-12">
+    <div class="col-lg-8">
       %let;op_m;3%in;%include;modules/individu
       %let;op_m;2%in;%include;modules/unions
       %let;op_m;1%in;%include;modules/chronologie
       %let;op_m;1%in;%include;modules/notes
       %let;op_m;2%in;%include;modules/sources
-    %if;(p_mod="" or p_mod="zz")</div>%end; %( end of <div class="col-8"> from individu.txt %)
+    </div>
     <div class="col-lg-4">
       %let;op_m;2%in;%include;modules/arbre_3gen_photo
       %let;op_m;1%in;%include;modules/fratrie
       %let;op_m;1%in;%include;modules/relations
     </div>
   </div>
+  %if;(b.show_documents="yes")
+    <div class="row col-12">
+      %let;op_m;1%in;%include;modules/documents
+    </div>
+  %end;
 %else;
   %(Dynamic %)
   <div class="mt-2">
+    %let;op_m;3%in;%include;modules/heading
     %for;i;0;p_mod_nbr;
       %let;mmi;%apply;mm(i)%in;
       %let;ooi;%apply;oo(i)%in;
@@ -70,10 +79,5 @@
 </div>
 </div>
 %include;js
-<script>
-$(function () {
-  $('[data-toggle="tooltip"]').tooltip()
-})
-</script>
 </body>
 </html>

@@ -98,13 +98,15 @@ const CheckData = (() => {
     return f;
   };
 
-  const createContainer = (btn, field) => {
+const createContainer = (btn, field) => {
     const c = document.createElement('div');
     c.className = SELECTORS.editContainer.slice(1);
     
     const orig = document.createElement('div');
     orig.className = 'original-content';
-    orig.textContent = btn.textContent;
+    Array.from(btn.childNodes).forEach(
+      n => orig.appendChild(n.cloneNode(true))
+    );
     
     c.appendChild(orig);
     c.appendChild(field);
@@ -343,7 +345,7 @@ const CheckData = (() => {
       
       if (result.nb_modified !== null && result.elapsed_time !== null) {
         const statsDiv = document.createElement('div');
-        statsDiv.className = 'small text-center mr-2';
+        statsDiv.className = 'small text-center me-2';
         statsDiv.textContent = `+${result.nb_modified}`;
         statsDiv.insertAdjacentHTML('beforeend', '<br>');
         statsDiv.insertAdjacentText('beforeend', 
@@ -499,8 +501,7 @@ const CheckData = (() => {
     
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
-    closeBtn.className = 'close ml-2';
-    closeBtn.innerHTML = '&times;';
+    closeBtn.className = 'btn-close ms-2';
     
     content.appendChild(msgSpan);
     content.appendChild(closeBtn);

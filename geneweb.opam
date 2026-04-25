@@ -13,9 +13,11 @@ bug-reports: "https://github.com/geneweb/geneweb/issues"
 depends: [
   "dune" {>= "3.6"}
   "ocaml" {>= "4.10"}
+  "geneweb-compat"
+  "geneweb-http"
   "alcotest" {with-test}
   "benchmark"
-  "calendars" {= "1.0.0"}
+  "calendars" {>= "2.0.0"}
   "camlp5" {>= "8.03.00"}
   "camlp-streams"
   "cppo"
@@ -23,6 +25,7 @@ depends: [
   "fmt"
   "logs"
   "logs-syslog"
+  "ptime"
   "jingoo"
   "markup"
   "ounit"
@@ -30,7 +33,7 @@ depends: [
   "ppx_deriving"
   "ppx_import"
   "stdlib-shims"
-  "unidecode" {= "0.2.0"}
+  "unidecode" {>= "0.5.0"}
   "uri"
   "uucp"
   "uunf"
@@ -39,9 +42,9 @@ depends: [
   "digestif"
   "pp_loc"
   "dune-site"
-  "xdg"
+  "conf-brotli"
   "utop" {with-dev-setup}
-  "ocamlformat" {with-dev-setup & = "0.28.1"}
+  "ocamlformat" {with-dev-setup & = "0.29.0"}
   "odoc" {with-doc}
 ]
 depopts: [

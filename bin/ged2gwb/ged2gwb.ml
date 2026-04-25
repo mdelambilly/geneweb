@@ -4,12 +4,13 @@ open Geneweb
 open Def
 
 module Driver = Geneweb_db.Driver
+module Dirs = Geneweb_dirs
 
 type person = (int, int, int) Def.gen_person
 type ascend = int Def.gen_ascend
 type union = int Def.gen_union
 type family = (int, int, int) Def.gen_family
-type couple = int Def.gen_couple
+type couple = int Adef.gen_couple
 type descend = int Def.gen_descend
 
 let log_oc = ref stdout
@@ -247,7 +248,7 @@ let ascii_of_macintosh s =
 
 let utf8_of_string s =
   match !charset with
-  | Ansel -> Mutil.utf_8_of_iso_8859_1 (Ansel.to_iso_8859_1 s)
+  | Ansel -> Ansel.to_utf_8 s
   | Ascii -> Mutil.utf_8_of_iso_8859_1 s
   | Msdos -> Mutil.utf_8_of_iso_8859_1 (ascii_of_msdos s)
   | MacIntosh -> Mutil.utf_8_of_iso_8859_1 (ascii_of_macintosh s)
@@ -492,30 +493,30 @@ let make_date n1 n2 n3 =
                 else 0, 0
       in
       let (d, m) = if m < 1 || m > 13 then 0, 0 else d, m in
-      {day = d; month = m; year = y; prec = Sure; delta = 0}
+      {Adef.day = d; month = m; year = y; prec = Sure; delta = 0}
   | None, Some m, Some y ->
       let m =
         match m with
           Right m -> m
         | Left m -> m
       in
-      {day = 0; month = m; year = y; prec = Sure; delta = 0}
+      {Adef.day = 0; month = m; year = y; prec = Sure; delta = 0}
   | None, None, Some y ->
-      {day = 0; month = 0; year = y; prec = Sure; delta = 0}
+      {Adef.day = 0; month = 0; year = y; prec = Sure; delta = 0}
   | Some y, None, None ->
-      {day = 0; month = 0; year = y; prec = Sure; delta = 0}
+      {Adef.day = 0; month = 0; year = y; prec = Sure; delta = 0}
   | _ -> raise (Stream.Error "bad date")
 
 let recover_date cal = function
-  | Dgreg (d, Dgregorian) ->
+  | Adef.Dgreg (d, Dgregorian) ->
     let d =
       match cal with
-      | Dgregorian -> d
+      | Adef.Dgregorian -> d
       | Djulian -> Calendar.gregorian_of_julian d
       | Dfrench -> Calendar.gregorian_of_french d
       | Dhebrew -> Calendar.gregorian_of_hebrew d
     in
-    Dgreg (d, cal)
+    Adef.Dgreg (d, cal)
   | d -> d
 
 [@@@ocaml.warning "-27"]
@@ -554,7 +555,7 @@ EXTEND
               let dmy2 =
                 match cal2 with
                 | Dgregorian ->
-                    {day2 = d2.day; month2 = d2.month;
+                    {Adef.day2 = d2.day; month2 = d2.month;
                      year2 = d2.year; delta2 = 0}
                 | Djulian ->
                     let dmy2 = Calendar.julian_of_gregorian d2 in
@@ -685,7 +686,12 @@ EXTEND
       | "-"; i = INT ->
         (try (- int_of_string i) with  Failure _ -> raise Stream.Failure)
       | i = INT; ID "BCE" ->
-        (try (- int_of_string i) with  Failure _ -> raise Stream.Failure) ] ]
+        (try (- int_of_string i) with  Failure _ -> raise Stream.Failure)
+      | i = INT; ID "B"; "."; ID "C"; "." ->
+        (try (- int_of_string i) with  Failure _ -> raise Stream.Failure)
+      | i = INT; ID "B"; "."; ID "C" ->
+        (try (- int_of_string i) with  Failure _ -> raise Stream.Failure)
+      ] ]
   ;
 END
 [@@@ocaml.warning "+27"]
@@ -697,7 +703,7 @@ let preg_match pattern subject =
 
 let date_of_field d =
   if d = "" then None
-  else if preg_match "^[0-9]+$" d && String.length d > 8 then Some (Dtext d)
+  else if preg_match "^[0-9]+$" d && String.length d > 8 then Some (Adef.Dtext d)
   else
     let s = Stream.of_string (String.uppercase_ascii d) in
     date_str := d;
@@ -819,12 +825,12 @@ let this_year =
 
 let infer_death birth bapt =
   match birth, bapt with
-  | Some (Dgreg (d, _)), _ ->
+  | Some (Adef.Dgreg (d, _)), _ ->
     let a = this_year - d.year in
     if a > !dead_years then DeadDontKnowWhen
     else if a < !alive_years then NotDead
     else DontKnowIfDead
-  | _, Some (Dgreg (d, _)) ->
+  | _, Some (Adef.Dgreg (d, _)) ->
     let a = this_year - d.year in
     if a > !dead_years then DeadDontKnowWhen
     else if a < !alive_years then NotDead
@@ -1059,7 +1065,26 @@ let treat_notes gen rl =
 let treat_source gen r =
   if String.length r.rval > 0 && r.rval.[0] = '@' then
     match find_sources_record gen r.rval with
-      Some v -> strip_spaces v.rcont, v.rsons
+      Some v ->
+        let src =
+          let titl =
+            match find_field "TITL" v.rsons with
+              Some l -> rebuild_text l
+            | None -> ""
+          in
+          let text =
+            match find_field "TEXT" v.rsons with
+              Some l -> rebuild_text l
+            | None -> ""
+          in
+          let rcont = strip_spaces v.rcont in
+          if titl <> "" && text <> "" then "{" ^ titl ^ "} " ^ text
+          else if titl <> "" then titl
+          else if text <> "" then text
+          else if rcont <> "" then rcont
+          else r.rval
+        in
+        src, v.rsons
     | None ->
         print_location r.rpos;
         Printf.fprintf !log_oc "Source %s not found\n" r.rval;
@@ -2075,7 +2100,8 @@ let primary_fevents =
   ["ANUL"; "DIV"; "ENGA"; "MARR"; "MARB"; "MARC"; "MARL"; "RESI"; "SEP"]
 
 (* Types d'évènement présents seulement dans les tags de niveau 2 (2 TYPE). *)
-let secondary_fevent_types = [Efam_NoMarriage; Efam_NoMention]
+let secondary_fevent_types =
+  [Efam_NoMarriage; Efam_NoMention; Efam_PACS]
 
 let treat_fam_fevent gen ifath r =
   let check_place_unmarried efam_name place r =
@@ -2656,9 +2682,15 @@ let open_in_bin_with_bom_check fname =
    | Bom.Utf8 -> charset_option := Some Utf8
    | bom when Bom.is_unsupported bom ->
        close_in ic;
-       Printf.fprintf !log_oc "Error: %s encoding not supported\n"
+       let base = Filename.remove_extension fname in
+       let ext = Filename.extension fname in
+       Printf.fprintf !log_oc
+         "Error: %s encoding detected, not supported\n"
          (Bom.to_string bom);
-       Printf.fprintf !log_oc "Convert file to UTF-8 or ANSEL first\n";
+       Printf.fprintf !log_oc
+         "Convert to UTF-8 first:\n\
+          iconv -f %s -t UTF-8 %s > %s_UTF8%s\n"
+         (Bom.to_string bom) fname base ext;
        flush !log_oc;
        exit 2
    | _ -> ());
@@ -2837,12 +2869,7 @@ let add_parents_to_isolated gen =
     | Left3 _ -> ()
   done
 
-let make_arrays in_file =
-  let fname =
-    if Filename.check_suffix in_file ".ged" then in_file
-    else if Filename.check_suffix in_file ".GED" then in_file
-    else in_file ^ ".ged"
-  in
+let make_arrays fname =
   let gen =
     {g_per = {arr = [| |]; tlen = 0}; g_fam = {arr = [| |]; tlen = 0};
      g_str = {arr = [| |]; tlen = 0}; g_bnot = ""; g_ic = open_in_bin_with_bom_check fname;
@@ -3048,9 +3075,9 @@ let check_parents_sex persons families couples strings =
   done
 
 let neg_year_dmy = function
-  | {day = d; month = m; year = y; prec = OrYear dmy2; _} ->
+  | {Adef.day = d; month = m; year = y; prec = OrYear dmy2; _} ->
     let dmy2 = {dmy2 with year2 = -abs dmy2.year2} in
-    {day = d; month = m; year = -abs y; prec = OrYear dmy2; delta = 0}
+    {Adef.day = d; month = m; year = -abs y; prec = OrYear dmy2; delta = 0}
   | {day = d; month = m; year = y; prec = YearInt dmy2; _} ->
     let dmy2 = {dmy2 with year2 = -abs dmy2.year2} in
     {day = d; month = m; year = -abs y; prec = YearInt dmy2; delta = 0}
@@ -3058,7 +3085,7 @@ let neg_year_dmy = function
     {day = d; month = m; year = -abs y; prec = p; delta = 0}
 
 let neg_year = function
-  | Dgreg (d, cal) -> Dgreg (neg_year_dmy d, cal)
+  | Adef.Dgreg (d, cal) -> Adef.Dgreg (neg_year_dmy d, cal)
   | x -> x
 
 let neg_year_cdate cd = Date.cdate_of_date (neg_year (Date.date_of_cdate cd))
@@ -3148,7 +3175,6 @@ let finish_base (persons, families, strings, _) =
 
 (* Main *)
 
-let in_file = ref ""
 let out_file = ref "a"
 
 let speclist =
@@ -3156,7 +3182,7 @@ let speclist =
       Arg.String Secure.set_base_dir,
       Fmt.str
       "<DIR> Specify where the “bases” directory with databases is installed \
-       (default if empty is %S)." Secure.default_base_dir )
+       (default if empty is %S)." (Dirs.name Secure.default_base_dir) )
   ; ( "-o", Arg.Set_string out_file,
       "<file> Output database (default: <input file name>.gwb, a.gwb if not \
        available). Alphanumerics and -" )
@@ -3230,7 +3256,7 @@ let speclist =
     , " Put untreated GEDCOM tags in notes" )
   ; ( "-ds", Arg.Set_string default_source
     , " Set the source field for persons and families without source data" )
-  ; ( "-dates", Arg.String (fun s -> 
+  ; ( "-dates", Arg.String (fun s ->
           if s = "dates_md" then month_number_dates := MonthDayDates
           else if s = "dates_dm" then month_number_dates := DayMonthDates)
     , " Interpret months-numbered dates as year only (default) or month/day/year or day/month/year" )
@@ -3264,11 +3290,15 @@ let errmsg = "Usage: ged2gwb [<ged>] [options] where options are:"
 let main () =
   Arg.parse speclist anonfun errmsg;
   if not (Array.mem "-bd" Sys.argv) then Secure.set_base_dir ".";
-  in_file :=
+  if !in_file <> "" then
+    close_in (open_in_bin_with_bom_check !in_file);
+  let input_file =
     if !in_file <> "" then
       Filename.remove_extension !in_file
-    else !in_file;
-  if !in_file <> "" && (not (Array.mem "-o" Sys.argv)) then out_file := !in_file;
+    else
+      !in_file
+  in
+  if input_file <> "" && (not (Array.mem "-o" Sys.argv)) then out_file := input_file;
   out_file := Filename.basename !out_file |> Filename.remove_extension;
   if not (Mutil.good_name !out_file) then (
     (* Util.transl conf not available !*)

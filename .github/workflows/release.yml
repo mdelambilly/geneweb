@@ -27,19 +27,19 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            ocaml-version: 5.4.0
+            ocaml-version: 5.4.1
             platform: macos-arm64
             is-unix: true
           - os: macos-15-intel
-            ocaml-version: 5.4.0
+            ocaml-version: 5.4.1
             platform: macos-intel
             is-unix: true
           - os: ubuntu-22.04
-            ocaml-version: 5.4.0
+            ocaml-version: 5.4.1
             platform: linux
             is-unix: true
           - os: windows-latest
-            ocaml-version: 4.14.2
+            ocaml-version: 4.14.3
             platform: windows
             is-unix: false
 
@@ -60,7 +60,12 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          cpan -j .github/ci-config/cpan-config.pm -T -f -i String::ShellQuote IPC::System::Simple;
+          curl -fsSL https://cpanmin.us | perl - --notest IPC::System::Simple String::ShellQuote
+          for pkg in conf-perl-ipc-system-simple conf-perl-string-shellquote; do
+            d=".pins/$pkg"; mkdir -p "$d"
+            printf 'opam-version: "2.0"\nsynopsis: "Pin bypass"\nmaintainer: "ci"\nbuild: ["true"]\ninstall: ["true"]\n' > "$d/opam"
+            opam pin add "$pkg" "$d" --yes --no-action
+          done
           rm -f _opam/bin/x86_64-w64-mingw32-gcc.exe || true
           rm -f _opam/bin/i686-w64-mingw32-gcc.exe || true
 
@@ -215,7 +220,7 @@ jobs:
           }
 
       - name: Upload release assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
           files: |

@@ -1,7 +1,5 @@
 (* Copyright (c) 1998-2007 INRIA *)
 
-open Def
-
 exception Same_person
 
 val is_ancestor :
@@ -52,10 +50,6 @@ val alphabetic : string -> string -> int
 val alphabetic_order : string -> string -> int
 (** Same as [alphabetic_utf_8] *)
 
-val arg_list_of_string : string -> string list
-(** Parse line and extract separated arguments ("" and '' are used to indlude
-    spaces inside the argument) *)
-
 val sort_person_list : Driver.base -> Driver.person list -> Driver.person list
 (** Sort list of persons by comparison with following order:
     - Compare by birth and death date
@@ -68,24 +62,12 @@ val sort_uniq_person_list :
   Driver.base -> Driver.person list -> Driver.person list
 (** Same as [sort_person_list] but also remove duplicates *)
 
-val father : 'a gen_couple -> 'a
-(** Same as [Adef.father] *)
-
-val mother : 'a gen_couple -> 'a
-(** Same as [Adef.mother] *)
-
-val couple : bool -> 'a -> 'a -> 'a gen_couple
-(** [couple multi f m] creates a couple from father [f] and mother [m]. If
-    [multi] true uses multiparent functionality *)
-
-val parent_array : 'a gen_couple -> 'a array
-(** Same as [Adef.parent_array] *)
-
 val find_free_occ : Driver.base -> string -> string -> int
 (** Find first free occurence number for the person with specified first name
     and surname. *)
 
-val get_birth_death_date : Driver.person -> date option * date option * bool
+val get_birth_death_date :
+  Driver.person -> Adef.date option * Adef.date option * bool
 (** [get_birth_death p] Return [(birth, death, approx)]. If birth/death date can
     not be found, baptism/burial date is used and [approx] is set to [true] (it
     is [false] if both birth and death dates are found). *)

@@ -22,7 +22,10 @@ function addClearButtonToInputs() {
     function initializeInput(element) {
         if (element.type === 'hidden' || 
             element.style.display === 'none' ||
-            getComputedStyle(element).display === 'none') {
+            getComputedStyle(element).display === 'none' ||
+            element.classList.contains('no-clear-button') ||
+            element.closest('.ts-wrapper') ||
+            element.tabIndex === -1) {
             return;
         }
         if (element.dataset.clearInitialized) {
@@ -37,9 +40,12 @@ function addClearButtonToInputs() {
 
         let wrapper = element.parentNode;
         if (!wrapper.classList.contains('clear-button-wrapper')) {
+            const isInline = element.style.width === 'auto' ||
+                             element.classList.contains('form-control-inline');
             wrapper = document.createElement('div');
             wrapper.className = 'clear-button-wrapper';
-            wrapper.style.cssText = 'position:relative;display:inline-block;width:100%';
+            wrapper.style.cssText = 'position:relative;display:inline-block;width:' +
+                                    (isInline ? 'auto' : '100%');
             element.parentNode.insertBefore(wrapper, element);
             wrapper.appendChild(element);
         }

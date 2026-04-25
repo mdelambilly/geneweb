@@ -126,6 +126,16 @@ let notes_links_db conf base eliminate_unlinked =
       Gutil.alphabetic_order (Name.lower s1) (Name.lower s2))
     db2
 
+let image_url_from_path conf path =
+  if path = "" then ""
+  else
+    let prefix = (Util.commd conf :> string) in
+    let album = "albums/" in
+    if Mutil.start_with album 0 path then
+      let n = String.length album in
+      prefix ^ "m=IMA&s=" ^ String.sub path n (String.length path - n)
+    else prefix ^ "m=DOC&s=" ^ path
+
 let json_extract_img conf s =
   let extract l =
     List.fold_left
@@ -152,7 +162,7 @@ let json_extract_img conf s =
   let json = try Yojson.Basic.from_string s with _ -> `Null in
   let _, img = match json with `Assoc l -> extract l | _ -> (None, None) in
   match img with
-  | Some img -> ((Util.commd conf :> string) ^ "m=DOC&s=" ^ img, img)
+  | Some img -> (image_url_from_path conf img, img)
   | None -> ("", "")
 
 let safe_gallery conf base s =
@@ -187,6 +197,7 @@ let safe_gallery conf base s =
     List.map
       (function
         | key, `String s when key = "title" -> (key, `String (html s))
+        | key, `String s when key = "chronicle" -> (key, `String (html s))
         | key, `String s when key = "desc" -> (key, `String (html s))
         | "map", `List lmap -> ("map", `List (List.map safe_map lmap))
         | "images", `List images_l ->
@@ -201,6 +212,7 @@ let safe_gallery conf base s =
                                 | "map", `List lmap ->
                                     ("map", `List (List.map safe_map lmap))
                                 | "img", `String s -> ("img", `String s)
+                                | "desc", `String s -> ("desc", `String (html s))
                                 | e -> e)
                               img_l)
                      | e -> e)
@@ -240,6 +252,7 @@ let update_notes_links_db base fnotes s =
             in
             loop list_nt list_ind (pos + 1) j
         | NotesLinks.WLwizard (j, _, _) -> loop list_nt list_ind pos j
+        | NotesLinks.WLimage (j, _, _, _) -> loop list_nt list_ind pos j
         | NotesLinks.WLnone (j, _) -> loop list_nt list_ind pos j
     in
     loop [] [] 1 0
@@ -373,6 +386,42 @@ let _print_key label (fn, sn, oc) =
 
 let lower_key (fn, sn, oc) = (Name.lower fn, Name.lower sn, oc)
 
+let json_gallery_items_for_key conf s key =
+  let json = try Yojson.Basic.from_string s with _ -> `Null in
+  let lkey = lower_key key in
+  let has_key ml =
+    let l = match ml with `List l -> l | _ -> [] in
+    List.exists
+      (fun e -> Def.NLDB.equal_key (lower_key (extract_pnoc e)) lkey)
+      l
+  in
+  let url f = image_url_from_path conf f in
+  let str k l =
+    try match List.assoc k l with `String v -> v | _ -> ""
+    with Not_found -> ""
+  in
+  let process images =
+    let _, r =
+      List.fold_left
+        (fun (i, acc) img ->
+          let i = i + 1 in
+          match img with
+          | `Assoc il
+            when has_key (try List.assoc "map" il with Not_found -> `Null) ->
+              let f = str "img" il in
+              (i, (i, url f, f, str "desc" il) :: acc)
+          | _ -> (i, acc))
+        (0, []) images
+    in
+    List.rev r
+  in
+  match json with
+  | `Assoc l -> (
+      match List.assoc_opt "images" l with
+      | Some (`List imgs) -> process imgs
+      | _ -> process [ `Assoc l ])
+  | _ -> []
+
 let replace_person person_json (new_fn, new_sn, new_oc) =
   `Assoc
     (List.map
@@ -386,23 +435,37 @@ let replace_person person_json (new_fn, new_sn, new_oc) =
 (* Processes the map to replace target person
    with new values if the condition is met *)
 let update_map json oldk newk =
-  let map_data =
-    json |> Yojson.Basic.Util.member "map" |> Yojson.Basic.Util.to_list
-  in
-  let updated_map =
+  let update_map_list lmap =
     List.map
       (fun person_json ->
         let current_person = extract_pnoc person_json |> lower_key in
         if current_person = lower_key oldk then replace_person person_json newk
         else person_json)
-      map_data
+      lmap
   in
-  `Assoc
-    (List.map
-       (function
-         | "map", _ -> ("map", `List updated_map)
-         | field -> field (* Preserve all other top-level fields *))
-       (Yojson.Basic.Util.to_assoc json))
+  let update_fields l =
+    List.map
+      (function
+        | "map", `List lmap -> ("map", `List (update_map_list lmap))
+        | "images", `List imgs ->
+            ( "images",
+              `List
+                (List.map
+                   (function
+                     | `Assoc il ->
+                         `Assoc
+                           (List.map
+                              (function
+                                | "map", `List lmap ->
+                                    ("map", `List (update_map_list lmap))
+                                | e -> e)
+                              il)
+                     | e -> e)
+                   imgs) )
+        | field -> field)
+      l
+  in
+  `Assoc (update_fields (Yojson.Basic.Util.to_assoc json))
 
 let update_gallery s oldk newk =
   (* assumes the json part starts at the first { *)
@@ -423,14 +486,19 @@ let update_gallery s oldk newk =
 
 let rewrite_key s oldk newk _file =
   let s =
-    if Mutil.contains s "TYPE=gallery" then update_gallery s oldk newk else s
+    if Mutil.contains s "TYPE=gallery" || Mutil.contains s "TYPE=album" then
+      update_gallery s oldk newk
+    else s
   in
   let slen = String.length s in
   let rec rebuild rs i =
     if i >= slen then rs
     else
       match NotesLinks.misc_notes_link s i with
-      | WLpage (j, _, _, _, _) | WLwizard (j, _, _) | WLnone (j, _) ->
+      | WLpage (j, _, _, _, _)
+      | WLwizard (j, _, _)
+      | WLimage (j, _, _, _)
+      | WLnone (j, _) ->
           let ss = String.sub s i (j - i) in
           rebuild (rs ^ ss) j
       | WLperson (j, k, name, text, fam_marker) ->
@@ -612,31 +680,21 @@ let fold_linked_pages conf base db key type_filter transform =
     (fun acc (pg, (_, il)) ->
       let record_it =
         match (pg, type_filter) with
-        | Def.NLDB.PgMisc n, Some typ ->
+        | Def.NLDB.PgMisc n, Some typ -> (
             let nenv = read_notes base n |> fst in
-            let gallery =
-              try List.assoc "TYPE" nenv = typ with Not_found -> false
-            in
-            gallery
+            try
+              let t = List.assoc "TYPE" nenv in
+              t = typ || (t = "album" && typ = "gallery")
+            with Not_found -> false)
         | Def.NLDB.PgInd ip, None -> (
             authorized_age conf base (pget conf base ip)
-            &&
-            match type_filter with
-            | Some "gallery" | Some "album" -> false
-            | _ -> true)
+            && match type_filter with Some "gallery" -> false | _ -> true)
         | Def.NLDB.PgFam ifam, None -> (
             authorized_age conf base
               (pget conf base (Driver.get_father @@ Driver.foi base ifam))
-            &&
-            match type_filter with
-            | Some "gallery" | Some "album" -> false
-            | _ -> true)
+            && match type_filter with Some "gallery" -> false | _ -> true)
         | _, _ -> (
-            true
-            &&
-            match type_filter with
-            | Some "gallery" | Some "album" -> false
-            | _ -> true)
+            match type_filter with Some "gallery" -> false | _ -> true)
       in
       if record_it then
         List.fold_left

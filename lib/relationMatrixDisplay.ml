@@ -2,6 +2,7 @@ open Config
 open RelationMatrix
 module Driver = Geneweb_db.Driver
 module Sosa = Geneweb_sosa
+module Server = Geneweb_http.Server
 
 (* Afficher une cellule de la matrice *)
 let print_matrix_cell conf base tstab persons i j cell_storage n =
@@ -31,7 +32,7 @@ let print_matrix_cell conf base tstab persons i j cell_storage n =
     | None ->
         Output.printf conf
           {|<td class="rm-cell" data-id="§%s_§%s">
-            <span class="text-muted">—</span>
+            <span class="text-body-secondary">—</span>
           </td>|}
           (Driver.Iper.to_string iper_i)
           (Driver.Iper.to_string iper_j)
@@ -65,7 +66,7 @@ let print_matrix_cell conf base tstab persons i j cell_storage n =
             Output.printf conf
               {|
 <td class="rm-cell" data-id="§%s_§%s" title="%s" data-url="%s"
-    data-toggle="tooltip" data-html="true" data-placement="top">%s</td>|}
+    data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top">%s</td>|}
               (Driver.Iper.to_string iper_i)
               (Driver.Iper.to_string iper_j)
               (String.map (function '"' -> '\'' | c -> c) tooltip_text)
@@ -79,7 +80,7 @@ let print_matrix_headers conf persons =
     let iper_j = Driver.get_iper persons.(j) in
     Output.printf conf
       {|<th class="text-center rm-thead" data-id="§%s_">
-         <span class="badge badge-pill badge-primary">%d</span>
+         <span class="badge rounded-pill text-bg-primary">%d</span>
        </th>|}
       (Driver.Iper.to_string iper_j)
       (j + 1)
@@ -94,7 +95,7 @@ let print_matrix_row conf base tstab persons i cell_storage n =
   Output.printf conf
     {|<th class="rm-head" data-id="§%s_">
     <div class="d-flex align-items-center">
-      <span class="badge badge-pill badge-primary mx-2">%d</span>
+      <span class="badge rounded-pill text-bg-primary mx-2">%d</span>
       %s%s
     </div>
   </th>|}
@@ -156,7 +157,7 @@ console.log('Matrix data loaded:', Object.keys(window.rmData.cells).length, 'cel
 let print conf base =
   if Util.url_has_pnoc_params conf.env then
     let clean_url = Util.normalize_person_pool_url conf base "RM" None in
-    Wserver.http_redirect_temporarily clean_url
+    Server.http_redirect_temporarily clean_url
   else
     let pl =
       let rec loop pl i =
@@ -188,7 +189,7 @@ let print conf base =
       (Util.transl_nth conf "relationship table" 3 |> Utf8.capitalize_fst);
     Output.printf conf
       {|<a href="%s" class="btn btn-outline-primary">
-          <i class="fas fa-edit mr-1"></i>%s</a></div>|}
+          <i class="fas fa-edit me-1"></i>%s</a></div>|}
       (tp_link conf)
       (Util.transl_nth conf "add/clear/show/edit the graph" 3
       |> Utf8.capitalize_fst);
@@ -197,17 +198,20 @@ let print conf base =
       print_matrix_table conf base persons;
       Output.print_sstring conf
         {|<script>
-document.addEventListener('DOMContentLoaded', function() {
-  $('[data-toggle="tooltip"]').tooltip();
-  $('#rm-table [data-toggle="tooltip"]').tooltip('dispose').tooltip({
-    customClass: 'rm-tooltip'
-  });
-  $('.table [data-id]').hover(function() {
-    var ids = $(this).data('id').split('_');
-    $('[data-id*="' + ids[0] + '"]').toggleClass('rm-hl0');
-    if (ids[1] && ids[1] !== ids[0]) {
-      $('[data-id*="' + ids[1] + '"]').toggleClass('rm-hl1');
-    }
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('#rm-table [data-bs-toggle="tooltip"]')
+    .forEach(el => new bootstrap.Tooltip(el, { customClass: 'rm-tooltip' }));
+  document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    .forEach(el => bootstrap.Tooltip.getOrCreateInstance(el));
+  document.querySelectorAll('.table [data-id]').forEach(cell => {
+    const ids = cell.dataset.id.split('_');
+    const toggle = () => {
+      document.querySelectorAll('[data-id*="' + ids[0] + '"]').forEach(el => el.classList.toggle('rm-hl0'));
+      if (ids[1] && ids[1] !== ids[0])
+        document.querySelectorAll('[data-id*="' + ids[1] + '"]').forEach(el => el.classList.toggle('rm-hl1'));
+    };
+    cell.addEventListener('mouseenter', toggle);
+    cell.addEventListener('mouseleave', toggle);
   });
 });
 </script>|});

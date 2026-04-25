@@ -1,3 +1,33 @@
+input[list]:placeholder-shown {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23495057' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+  padding-right: 2.25rem;
+}
+
+/*  pagination impression book */
+.fp-page-break { page-break-after: always; }
+.fp-no-break   { page-break-inside: avoid; }
+
+.form-control-inline {
+  display: inline-block !important;
+  width: auto !important;
+  vertical-align: middle; 
+}
+
+/* Chronologie */
+.age-years { color: #0066cc; }
+.age-months { color: #000; }
+.age-days { color: #888; }
+
+.age-posthumous .age-years,
+.age-posthumous .age-months,
+.age-posthumous .age-days {
+  color: #aaa ;
+  cursor: not-allowed;
+}
+
 /* Notifications */
 .notif-ctr {
   position: fixed;
@@ -17,18 +47,6 @@ code {
   padding-bottom: 0.5rem;
 }
 
-/* Élargissement raisonnable du container pour les hautes résolutions */
-@media (min-width: 1600px) {
-  body .container {
-    width: 100%;
-    max-width: 1280px;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 15px;
-    padding-right: 15px;
-  }
-}
-
 body, .form-control {
   color: black !important;
 }
@@ -37,8 +55,17 @@ a, .pre {
   white-space: pre;
 }
 
+#destable a, #anctable a, #anctableX a {
+  white-space: unset;
+}
+
 a:has(i), .deslist a, .ind-notes a {
   white-space: normal;
+}
+
+#mod_notes table img {
+  max-width: 100%;
+  height: auto;
 }
 
 /* Sosa icon as bullet list icon */
@@ -190,9 +217,25 @@ td .rm-cell {
 }
 
 /* cousins relation table m=C */
+#quickrel .btn-light {
+  background-color: #f8f9fa;   /* fond quasi-blanc : le p-1 crée le cadre blanc visible */
+  border-color: #f8f9fa;       /* bordure quasi-blanche sur beige = effet 3D subtil */
+}
+
+.modal .listitems > .card {
+  display: inline-block;
+  width: 100%;
+  break-inside: avoid;
+  margin-bottom: .5rem;
+}
+
 .toggle-button:focus {
   outline: none; /* On generation picker, hide the toggle +/- button outline+shadow */
   box-shadow: none;
+}
+
+#quickrel td {
+  background-color: transparent !important;
 }
 
 #quickrel tr {
@@ -229,12 +272,12 @@ td .rm-cell {
   font-weight: 300;
 }
 
-.h-15p {
-  height: 15px;
+.h-10p {
+  height: 10px;
 }
 
-.h-5 {
-  height: 5rem;
+.h-4 {
+  height: 4rem;
 }
 
 .z-index1 {
@@ -431,9 +474,6 @@ td .rm-cell {
   font-weight: 500;
   border: none !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
-}
-
-.ajax-notification {
   position: fixed;
   top: 20px;
   right: 20px;
@@ -442,18 +482,17 @@ td .rm-cell {
   animation: slideInRight 0.3s ease-out;
 }
 
-.ajax-notification .close {
+.ajax-notification.removing {
+  animation: slideOutRight 0.3s ease-in;
+}
+
+.ajax-notification .btn-close {
   outline: none;
   opacity: 0.7;
   transition: opacity 0.2s;
 }
-
-.ajax-notification .close:hover {
+.ajax-notification .btn-close:hover {
   opacity: 1;
-}
-
-.ajax-notification.removing {
-  animation: slideOutRight 0.3s ease-in;
 }
 
 @keyframes slideInRight {
@@ -476,31 +515,10 @@ td .rm-cell {
   50% { transform: scale(1.2); }
 }
 
-
-/* Style pour le bouton pendant le chargement */
 .btn.loading {
   pointer-events: none;
   opacity: 0.8;
 }
-
-/* Amélioration visuelle des notifications */
-.ajax-notification {
-  font-size: 0.9em;
-  font-weight: 500;
-  border: none !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
-}
-
-.ajax-notification .close {
-  outline: none;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-}
-
-.ajax-notification .close:hover {
-  opacity: 1;
-}
-
 
 /* Toolbar and characters panel */
 /* Light grey background color highlight for the toolbar characters.txt */
@@ -689,7 +707,7 @@ a.book-arrow:hover {
   scroll-margin-top: 5rem;
 }
 
-@include media-breakpoint-up(sm) {
+@include media-breakpoint-up(xs) {
   html {
     font-size: 1rem;
   }
@@ -814,20 +832,23 @@ Unicode Ranges: 0030-0039,0061-007A,00A0,2500-2503,250A,2514,2517,251C,2523,252C
   font-family: 'Open Sans', Roboto, sans-serif;
 }
 
-.asc-desc-table td.side-border-male {
+.asc-desc-table td.side-border-male,
+.asc-desc-table td.side-border-female {
   border-right-width: 2px;
   border-left-width: 2px;
+  border-style: dashed;
+
+}
+.asc-desc-table td.side-border-male {
   border-color: #318CE7;
 }
 
 .asc-desc-table td.side-border-female {
-  border-right-width: 2px;
-  border-left-width: 2px;
   border-color: #F653A6;
 }
 
 .asc-desc-table thead {
-  background-color: khaki;
+  --bs-table-bg: khaki;
 }
 
 #anctable.asc-desc-table thead th:hover:not(.no-hover),
@@ -856,6 +877,11 @@ Unicode Ranges: 0030-0039,0061-007A,00A0,2500-2503,250A,2514,2517,251C,2523,252C
 .divorced-side-border {
   border-left: 1px dashed #808080 !important;
   border-right: 1px dashed #808080 !important;
+}
+
+/* Couple table: highlight incomplete marriage events */
+.not_sure_dates.bg-ly-incomplete, span.bg-ly-incomplete {
+  background-color: rgb(255 238 186 / 95%);
 }
 
 /* Specific hover effect for the link inside the table cell */
@@ -973,10 +999,6 @@ Unicode Ranges: 0030-0039,0061-007A,00A0,2500-2503,250A,2514,2517,251C,2523,252C
 
 .pb-6 {
   padding-bottom: 4.5rem;
-}
-
-.mb-6 {
-  margin-bottom: 5rem;
 }
 
 /* Wrapper pour positionner les placeholders flottants */
@@ -1110,9 +1132,20 @@ div.anchor_upd {
   }
 }
 
-/* Force select2 results padding to 0 */
-.select2-results__option {
-  padding:0px
+/* Tom select */
+#v + .ts-wrapper .ts-dropdown-content {
+  max-height: calc(100vh - 220px);
+  min-height: 12rem;
+}
+
+#fname + .ts-wrapper .ts-dropdown-content {
+  max-height: 20rem;
+}
+
+.ts-wrapper.single:not(.has-items) .ts-control::before {
+  content: var(--ts-placeholder, '');
+  color: var(--bs-secondary-color);
+  pointer-events: none;
 }
 
 /* Capitalization unavailable in note from Ocaml
@@ -1605,18 +1638,19 @@ li.desc
 
 
 /* --------------------------- Pyramide des Ã¢ges -------------------------- */
-.pyramid_center
-{
-  padding-left: 6px;
-  padding-right: 6px;
+#table_pop_pyr {
+  border-collapse:collapse;
+  margin:auto;
 }
 
-
-.pyramid_nb
-{
-  font-style: italic;
+#table_pop_pyr td{
+  padding:1px 0;
 }
 
+#table_pop_pyr.pyr-compact td{
+  font-size:11px;
+  line-height:.9;
+}
 
 /* --------------------------------- wiki -------------------------------- */
 div.summary ul
@@ -2049,7 +2083,7 @@ hr.full
   margin-right: 0;
 }
 
-/* --- Ascendants/Descendants liste rÃ©digÃ©e --- */
+/* --- Ascendants/Descendants liste rédigée --- */
 .asc_notes_src_inline, .desc_notes_src_inline
 {
   padding-left:15px;
@@ -2207,12 +2241,15 @@ span.notesourcecolor {
   border-radius: .25rem .25rem 0 0;
 }
 
-.imap-gallery a + :last-child {
-  padding: .75rem;
-  color: #212529;
+.gallery-legend {
+  display: block;
+  line-height: 1.1rem;
+  padding: 6px 8px;
   font-size: .875rem;
-  text-align: center;
-  border-top: 1px solid #dee2e6;
+  color: #212529;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .imap-group {
@@ -2314,34 +2351,32 @@ span.notesourcecolor {
 
 /* Relationships matrix */
 .rm-head {
-  background-color: #f8f9fa;
+  --bs-table-bg: #f8f9fa;
   vertical-align: middle !important;
   white-space: nowrap;
-  border-bottom: 0px;
   min-height: 60px;
-
 }
 .rm-thead {
-  background-color: #f8f9fa;
+  --bs-table-bg: #f8f9fa;
   font-weight: bold;
-  border-top: 0px;
+  
 }
 .rm-cell {
-  background-color: #fff;
+  --bs-table-bg: #fff;
   vertical-align: middle !important;
   text-align: center;
   cursor: pointer;
   line-height: 1rem;
 }
 .rm-cell a {
-  text-decoratione: none;
+  text-decoration: none;
 }
 .rm-cell:hover {
-  background-color: #e9ecef;
+  --bs-table-bg: #e9ecef;
   line-height: 1rem;
 }
 .rm-diag {
-  background-color: #bcd3eb;
+  --bs-table-bg: #bcd3eb;
   color: white;
   vertical-align: middle !important;
   text-align: center;
@@ -2349,15 +2384,15 @@ span.notesourcecolor {
   min-width: 60px;
 }
 .rm-empty {
-  background-color: transparent;
+  --bs-table-bg: transparent;
   border: none !important;
   text-align: center;
 }
 .rm-hl0 {
-  background-color: rgba(255, 193, 7, 0.3) !important;
+  --bs-table-bg: rgba(255, 193, 7, 0.3) !important;
 }
 .rm-hl1 {
-  background-color: rgba(40, 167, 69, 0.3) !important;
+  --bs-table-bg: rgba(40, 167, 69, 0.3) !important;
 }
 .rm-hl0.rm-hl1 {
   background: linear-gradient(45deg, rgba(255, 193, 7, 0.5) 50%, rgba(40, 167, 69, 0.5) 50%) !important;
@@ -2376,15 +2411,15 @@ span.notesourcecolor {
   font-size: 13px !important;
   padding: 8px 12px !important;
 }
-#rm-table [data-toggle="tooltip"] .tooltip.top .tooltip-arrow {
-  border-top-color: #ddd !important;
+#rm-table tr:first-child th:first-child {
+  --bs-table-bg: transparent;
+  border: none !important;
 }
-#rm-table [data-toggle="tooltip"] .tooltip.bottom .tooltip-arrow {
-  border-bottom-color: #ddd !important;
-}
-#rm-table [data-toggle="tooltip"] .tooltip.left .tooltip-arrow {
-  border-left-color: #ddd !important;
-}
-#rm-table [data-toggle="tooltip"] .tooltip.right .tooltip-arrow {
-  border-right-color: #ddd !important;
-}
+
+/* Calendar tool: moon visualization */
+.moon-vis{width:60px;height:60px;border-radius:50%;
+  position:relative;overflow:hidden;display:inline-block;
+  background:#1a1a2e;box-shadow:0 0 8px rgba(255,255,200,.3)}
+.moon-vis .lit{position:absolute;top:0;height:100%;
+  background:linear-gradient(135deg,#fffde7,#fff9c4);
+  border-radius:50%}

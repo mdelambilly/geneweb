@@ -4,6 +4,7 @@
     functions if it does not come with a performance cost. *)
 
 module Driver = Geneweb_db.Driver
+module Code = Geneweb_http.Code
 
 let nb_errors = ref 0
 let errors_undef = ref []
@@ -38,6 +39,7 @@ let lang_d = ref (fun _ _ -> "")
 let bpath = ref (fun _ -> "")
 let portraits_d = ref (fun _ -> "")
 let images_d = ref (fun _ -> "")
+let albums_d = ref (fun _ -> "")
 let clean_bname bname = Filename.remove_extension bname
 let path_concat parts = String.concat Filename.dir_sep parts
 let base_dir () = Secure.base_dir ()
@@ -82,6 +84,10 @@ module Default = struct
     let bname = clean_bname bname in
     path_concat [ base_dir (); bname ^ ".gwb"; "documents"; "images" ]
 
+  let albums_d bname =
+    let bname = clean_bname bname in
+    path_concat [ base_dir (); bname ^ ".gwb"; "documents"; "albums" ]
+
   let bpath bname =
     let bname = clean_bname bname in
     Filename.concat (base_dir ()) (bname ^ ".gwb")
@@ -123,6 +129,10 @@ module Legacy = struct
     let bname = clean_bname bname in
     path_concat [ base_dir (); "src"; bname; "images" ]
 
+  let albums_d bname =
+    let bname = clean_bname bname in
+    path_concat [ base_dir (); "src"; bname; "albums" ]
+
   let bpath bname =
     let bname = clean_bname bname in
     Filename.concat (base_dir ()) (bname ^ ".gwb")
@@ -146,7 +156,8 @@ let init () =
     lang_d := Default.lang_d;
     bpath := Default.bpath;
     portraits_d := Default.portraits_d;
-    images_d := Default.images_d)
+    images_d := Default.images_d;
+    albums_d := Default.albums_d)
   else (
     config := Legacy.config;
     cnt_d := Legacy.cnt_d;
@@ -157,7 +168,8 @@ let init () =
     lang_d := Legacy.lang_d;
     bpath := Legacy.bpath;
     portraits_d := Legacy.portraits_d;
-    images_d := Legacy.images_d)
+    images_d := Legacy.images_d;
+    albums_d := Legacy.albums_d)
 
 let test_reorg bname =
   if !reorg || is_reorg_base bname then (
@@ -234,9 +246,9 @@ and migrate_gwf_bidirectional bname user_wants_reorg =
   let reorg_exists = Sys.file_exists reorg_path in
   Printf.eprintf "Migration check for %s:\n" bname;
   Printf.eprintf "  Classic .gwf exists: %b%s\n" legacy_exists
-    (if legacy_exists then " (" ^ legacy_path ^ ")" else "");
+    (if legacy_exists then " (" ^ Filename.basename legacy_path ^ ")" else "");
   Printf.eprintf "  Reorg .gwf exists: %b%s\n" reorg_exists
-    (if reorg_exists then " (" ^ reorg_path ^ ")" else "");
+    (if reorg_exists then " (" ^ Filename.basename reorg_path ^ ")" else "");
   match (user_wants_reorg, legacy_exists, reorg_exists) with
   | true, true, false ->
       (* Migration classic → reorg *)
@@ -308,7 +320,7 @@ let output_error =
     | None -> (
         let code =
           match code with
-          | Def.Bad_Request -> "400"
+          | Code.Bad_Request -> "400"
           | Unauthorized -> "401"
           | Forbidden -> "403"
           | Not_Found -> "404"
@@ -494,14 +506,10 @@ let has_date base p =
 
 (* Authorization checks for person access *)
 let p_auth conf base p =
-  let mode_semi_public =
-    try List.assoc "semi_public" conf.Config.base_env = "yes"
-    with Not_found -> false
-  in
   let access = Driver.get_access p in
   let not_private = access <> Def.Private in
   conf.Config.wizard
-  || ((not mode_semi_public) && conf.Config.friend)
+  || ((not conf.Config.semi_public) && conf.Config.friend)
   || conf.user_iper = Some (Driver.get_iper p)
   || access = Def.Public
   || conf.Config.public_if_titles && access = Def.IfTitles
@@ -519,8 +527,8 @@ let p_auth conf base p =
       | None -> none ()
       | Some d ->
           let a = Date.time_elapsed d conf.today in
-          if a.Def.year > lim then true
-          else if a.Def.year = 0 then a.month > 0 || a.day > 0
+          if a.Adef.year > lim then true
+          else if a.Adef.year = lim && (a.month > 0 || a.day > 0) then true
           else none ()
     in
     check_date
@@ -565,7 +573,7 @@ let wrap_output (conf : Config.config) (title : Adef.safe_string)
   Output.print_sstring conf conf.charset;
   Output.print_sstring conf {|">|};
   Output.print_sstring conf
-    {|<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">|};
+    {|<meta name="viewport" content="width=device-width, initial-scale=1">|};
   Output.print_sstring conf {|</head>|};
   Output.print_sstring conf "<body>";
   content ();

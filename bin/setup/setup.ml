@@ -1,4 +1,6 @@
 open Geneweb
+module Server = Geneweb_http.Server
+module Code = Geneweb_http.Code
 
 let port = ref 2316
 let gwd_port = ref 2317
@@ -16,10 +18,10 @@ let printer_conf =
     Config.empty with
     output_conf =
       {
-        status = Wserver.http;
-        header = Wserver.header;
-        body = Wserver.print_string;
-        flush = Wserver.wflush;
+        status = Server.http;
+        header = Server.header;
+        body = Server.print_string;
+        flush = Server.wflush;
       };
   }
 
@@ -50,7 +52,7 @@ let charset conf =
   try Hashtbl.find conf.lexicon "!charset" with Not_found -> "utf-8"
 
 let header_no_page_title conf title =
-  Output.status printer_conf Def.OK;
+  Output.status printer_conf Code.OK;
   Output.header printer_conf "Content-type: text/html; charset=%s"
     (charset conf);
   Output.print_sstring printer_conf
@@ -598,10 +600,30 @@ let rec copy_from_stream conf print strm =
                   print_specific_file conf print outfile strm
               | 'I' ->
                   (* %Ivar;value;{var = value part|false part} *)
-                  (* var is a evar from url of a bvar from basename.gwf or setup.gwf *)
+                  (* var is a evar from url or a bvar from basename.gwf or setup.gwf *)
                   let k1 = get_variable strm in
                   let k2 = get_variable strm in
                   print_if_else conf print (s_getenv conf.env k1 = k2) strm
+              | 'J' ->
+                  (* %Jvar;value;{var = value part|false part} *)
+                  (* var and value may contain %m macros *)
+                  let k1 = parse_upto ';' strm in
+                  let s1 = ref "" in
+                  let _ =
+                    copy_from_stream conf
+                      (fun k -> s1 := !s1 ^ k)
+                      (Stream.of_string k1)
+                  in
+                  let k1 = !s1 in
+                  let k2 = parse_upto ';' strm in
+                  let s2 = ref "" in
+                  let _ =
+                    copy_from_stream conf
+                      (fun k -> s2 := !s2 ^ k)
+                      (Stream.of_string k2)
+                  in
+                  let k2 = !s2 in
+                  print_if_else conf print (k1 = k2) strm
               | 'K' ->
                   (* print the name of -o filename, prepend bname or -o1 filename *)
                   let outfile1 = strip_spaces (s_getenv conf.env "o") in
@@ -822,7 +844,7 @@ let print_file conf bname =
   let ic_opt = try Some (open_in fname) with Sys_error _ -> None in
   match ic_opt with
   | Some ic ->
-      Output.status printer_conf Def.OK;
+      Output.status printer_conf Code.OK;
       Output.header printer_conf "Content-type: text/html; charset=%s"
         (charset conf);
       copy_from_stream conf
@@ -949,7 +971,7 @@ let gwc_or_ged2gwb out_name_of_in_name conf =
   else print_file conf "create.htm"
 
 let gwc_check conf =
-  let conf = { conf with env = ("nofail", "on") :: ("f", "on") :: conf.env } in
+  let conf = { conf with env = ("nofail", "on") :: conf.env } in
   gwc_or_ged2gwb out_name_of_gw conf
 
 let ged2gwb_check conf =
@@ -1013,38 +1035,17 @@ let cache_files ok_file conf =
 let connex_check conf = print_file conf "confirm.htm"
 
 let connex ok_file conf =
-  let ic = Unix.open_process_in "uname" in
-  let uname = input_line ic in
-  let () = close_in ic in
-  let rc =
-    let commnd1 =
-      "cd " ^ Sys.getcwd () ^ "; tput bel;"
-      ^ stringify (Filename.concat !bin_dir "connex")
-      ^ " " ^ parameters conf.env
-    in
-    let commnd2 =
-      stringify (Filename.concat !bin_dir "connex") ^ " " ^ parameters conf.env
-    in
-    if uname = "Darwin" then
-      if !no_o then
-        let launch = "tell application \"Terminal\" to do script " in
-        Sys.command ("osascript -e '" ^ launch ^ " \" " ^ commnd1 ^ " \"' ")
-      else exec_f conf commnd2
-    else if uname = "Linux" then
-      (* non testé ! *)
-      if !no_o then Sys.command ("xterm -e \" " ^ commnd1 ^ " \" ")
-      else exec_f conf commnd2
-    else if Sys.win32 then
-      (* à compléter et tester ! *)
-      if !no_o then Sys.command commnd1 else exec_f conf commnd2
-    else (
-      Printf.eprintf "%s (%s) %s (%s)\n" "Unknown Os_type" Sys.os_type
-        "or wrong uname response" uname;
-      flush stderr;
-      2)
+  let comm =
+    stringify (Filename.concat !bin_dir "connex") ^ " " ^ parameters conf.env
   in
+  let s = comm ^ " > comm.log" in
+  Printf.eprintf "$ cd \"%s\"\n" (Sys.getcwd ());
+  Printf.eprintf "$ %s\n" s;
   flush stderr;
-  if rc > 1 then print_file conf "err_standard.htm" else print_file conf ok_file
+  let rc = Sys.command s in
+  flush stderr;
+  if rc <> 0 then print_file conf "err_standard.htm"
+  else print_file conf ok_file
 
 let gwu_or_gwb2ged_check suffix conf =
   let in_file =
@@ -1459,33 +1460,6 @@ let merge_1 conf =
   if rc > 1 then print_file conf "err_standard.htm"
   else print_file conf "create_ok.htm"
 
-let read_gwd_arg () =
-  let fname = Filename.concat !setup_dir "gwd.arg" in
-  match try Some (open_in fname) with Sys_error _ -> None with
-  | Some ic ->
-      let list =
-        let rec loop list =
-          match try Some (input_line ic) with End_of_file -> None with
-          | Some "" -> loop list
-          | Some s -> loop (s :: list)
-          | None -> list
-        in
-        loop []
-      in
-      close_in ic;
-      let rec loop env = function
-        | x :: l ->
-            if x.[0] = '-' then
-              let x = String.sub x 1 (String.length x - 1) in
-              match l with
-              | y :: l when y.[0] <> '-' -> loop ((x, y) :: env) l
-              | _ -> loop ((x, "") :: env) l
-            else loop env l
-        | [] -> List.rev env
-      in
-      loop [] (List.rev list)
-  | None -> []
-
 let gwf conf =
   let in_base =
     match p_getenv conf.env "anon" with Some f -> strip_spaces f | None -> ""
@@ -1555,38 +1529,6 @@ let gwf_1 conf =
      with Sys_error _ -> ());
     print_file conf "gwf_ok.htm"
 
-let gwd conf =
-  let aenv = read_gwd_arg () in
-  let get v = try List.assoc v aenv with Not_found -> "" in
-  let conf =
-    {
-      conf with
-      env =
-        ("default_lang", get "lang")
-        :: ("only", get "only")
-        :: ("log", Filename.basename (get "log"))
-        :: conf.env;
-    }
-  in
-  print_file conf "gwd.htm"
-
-let gwd_1 conf =
-  let oc = open_out (Filename.concat !setup_dir "gwd.arg") in
-  let print_param k =
-    match p_getenv conf.env k with
-    | Some v when v <> "" -> Printf.fprintf oc "-%s\n%s\n" k v
-    | _ -> ()
-  in
-  if p_getenv conf.env "setup_link" <> None then
-    Printf.fprintf oc "-setup_link\n";
-  print_param "only";
-  (match p_getenv conf.env "default_lang" with
-  | Some v when v <> "" -> Printf.fprintf oc "-lang\n%s\n" v
-  | _ -> ());
-  print_param "log";
-  close_out oc;
-  print_file conf "gwd_ok.htm"
-
 let ged2gwb conf =
   let rc =
     let comm = stringify (Filename.concat !bin_dir conf.comm) in
@@ -1632,7 +1574,7 @@ let print_typed_file conf typ fname =
   let ic_opt = try Some (open_in_bin fname) with Sys_error _ -> None in
   match ic_opt with
   | Some ic ->
-      Output.status printer_conf Def.OK;
+      Output.status printer_conf Code.OK;
       Output.header printer_conf "Content-type: %s" typ;
       Output.header printer_conf "Content-length: %d" (in_channel_length ic);
       (try
@@ -1704,8 +1646,6 @@ let setup_comm_ok conf = function
       | _ -> update_nldb conf "update_nldb_ok.htm")
   | "gwf" -> gwf conf
   | "gwf_1" -> gwf_1 conf
-  | "gwd" -> gwd conf
-  | "gwd_1" -> gwd_1 conf
   | "cache_files" -> (
       match p_getenv conf.env "opt" with
       | Some "check" -> cache_files_check conf
@@ -1747,9 +1687,12 @@ let string_of_sockaddr = function
 
 let only_addr () =
   let local_addr =
-    if Unix.string_of_inet_addr Unix.inet6_addr_any = "::" then
+    try
+      let s = Unix.socket Unix.PF_INET6 Unix.SOCK_STREAM 0 in
+      Unix.close s;
+      Unix.string_of_inet_addr Unix.inet6_addr_loopback
+    with Unix.Unix_error (Unix.EAFNOSUPPORT, _, _) ->
       Unix.string_of_inet_addr Unix.inet_addr_loopback
-    else Unix.string_of_inet_addr Unix.inet6_addr_loopback
   in
   let fname = Lazy.force only_file_name in
   match try Some (open_in fname) with Sys_error _ -> None with
@@ -1877,22 +1820,6 @@ let copy_text lang fname =
       ();
       exit 2
 
-let set_gwd_default_language_if_absent lang =
-  let env = read_gwd_arg () in
-  let fname = Filename.concat !setup_dir "gwd.arg" in
-  match try Some (open_out fname) with Sys_error _ -> None with
-  | Some oc ->
-      let lang_found = ref false in
-      List.iter
-        (fun (k, v) ->
-          Printf.fprintf oc "-%s\n" k;
-          if k = "lang" then lang_found := true;
-          if v <> "" then Printf.fprintf oc "%s\n" v)
-        env;
-      if not !lang_found then Printf.fprintf oc "-lang\n%s\n" lang;
-      close_out oc
-  | None -> ()
-
 let daemon = ref false
 
 let usage =
@@ -1935,57 +1862,63 @@ let null_reopen flags fd =
 let setup_available_languages = [ "de"; "en"; "es"; "fr"; "it"; "lv"; "sv" ]
 
 let intro () =
-  let default_gwd_lang, default_setup_lang =
+  let default_setup_lang =
     if Sys.unix then
       let s = try Sys.getenv "LANG" with Not_found -> "" in
       if List.mem s Version.available_languages then
-        (s, if List.mem s setup_available_languages then s else "en")
+        if List.mem s setup_available_languages then s else "en"
       else
         let s = try Sys.getenv "LC_CTYPE" with Not_found -> "" in
         if String.length s >= 2 then
           let s = String.sub s 0 2 in
           if List.mem s Version.available_languages then
-            (s, if List.mem s setup_available_languages then s else "en")
-          else (!default_lang, !default_lang)
-        else (!default_lang, !default_lang)
-    else (!default_lang, !default_lang)
+            if List.mem s setup_available_languages then s else "en"
+          else !default_lang
+        else !default_lang
+    else !default_lang
   in
   Secure.set_base_dir ".";
   Arg.parse speclist anonfun usage;
   if !bin_dir = "" then bin_dir := !setup_dir;
-  Printf.eprintf "Start gwsetup\n";
-  flush stderr;
+  Printf.eprintf "Start gwsetup\n%!";
   default_lang := default_setup_lang;
-  let gwd_lang, setup_lang =
-    if !daemon then
-      if Sys.unix then (
-        let setup_lang =
-          if String.length !lang_param < 2 then default_setup_lang
-          else !lang_param
-        in
-        Printf.printf "To start, open location http://localhost:%d/\n" !port;
-        flush stdout;
-        if Unix.fork () = 0 then (
-          Unix.close Unix.stdin;
-          null_reopen [ Unix.O_WRONLY ] Unix.stdout)
-        else exit 0;
-        (default_gwd_lang, setup_lang))
-      else (default_gwd_lang, default_setup_lang)
-    else
-      let gwd_lang, setup_lang =
-        if String.length !lang_param < 2 then (
+
+  let get_lang () =
+    if String.length !lang_param >= 2 then !lang_param else default_setup_lang
+  in
+
+  let setup_lang =
+    if !daemon && Sys.unix then begin
+      let addr =
+        let only = only_addr () in
+        if only <> "127.0.0.1" && only <> "::1" then only else "localhost"
+      in
+      Printf.printf "To start, open location http://%s:%d/\n%!" addr !port;
+      if Unix.fork () = 0 then begin
+        Unix.close Unix.stdin;
+        null_reopen [ Unix.O_WRONLY ] Unix.stdout
+      end
+      else exit 0;
+      get_lang ()
+    end
+    else if !daemon then default_setup_lang
+    else begin
+      let lang =
+        if String.length !lang_param >= 2 then !lang_param
+        else begin
           copy_text "" "intro.txt";
           let x = String.lowercase_ascii (input_line stdin) in
-          if String.length x < 2 then (default_gwd_lang, default_setup_lang)
-          else
-            let x = String.sub x 0 2 in
-            (x, x))
-        else (!lang_param, !lang_param)
+          if String.length x >= 2 then String.sub x 0 2 else default_setup_lang
+        end
       in
-      copy_text setup_lang (Filename.concat "lang" "intro.txt");
-      (gwd_lang, setup_lang)
+      copy_text lang (Filename.concat "lang" "intro.txt");
+      let only = only_addr () in
+      if only <> "127.0.0.1" && only <> "::1" then
+        Printf.printf "       http://%s:%d/\n" only !port;
+      lang
+    end
   in
-  set_gwd_default_language_if_absent gwd_lang;
+
   default_lang := setup_lang;
   if not Sys.unix then (
     Unix.putenv "GWLANG" setup_lang;
@@ -1996,4 +1929,8 @@ let intro () =
 let () =
   if Sys.unix then intro ()
   else if Sys.getenv_opt "WSERVER" = None then intro ();
-  Wserver.start ~port:!port ~max_pending_requests:150 ~n_workers:1 wrap_setup
+  (* FIXME: this hack is necessary to avoid a cyclic dependency between
+     `geneweb` and `geneweb-http`. We must remove it after refactoring
+     the encoded string subsystem. *)
+  let wrap_setup x y z = wrap_setup x y (Adef.encoded z) in
+  Server.start ~port:!port ~max_pending_requests:150 ~n_workers:1 wrap_setup

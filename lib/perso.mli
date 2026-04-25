@@ -177,7 +177,12 @@ val string_of_title :
   * Geneweb_db.Driver.istr Def.gen_title_name
   * Geneweb_db.Driver.istr
   * Geneweb_db.Driver.istr list
-  * (Def.date option * Def.date option) list ->
+  * (Adef.date option * Adef.date option) list ->
   Adef.safe_string
 (** Optionnal [link] argument is passed to {!val:DateDisplay.string_of_ondate}
 *)
+
+val print_isolated : config -> Geneweb_db.Driver.base -> unit
+(** Display persons with no parents and no families, grouped into truly
+    isolated, linked by relation (rparents), and referenced by other persons
+    (related/witnesses). *)

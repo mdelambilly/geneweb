@@ -136,7 +136,7 @@ val nobtit :
     respects constraints imposed by [conf.allowed_titles] and
     [conf.denied_titles] *)
 
-val strictly_after_private_years : dmy -> int -> bool
+val strictly_after_private_years : Adef.dmy -> int -> bool
 
 val authorized_age :
   config -> Geneweb_db.Driver.base -> Geneweb_db.Driver.person -> bool
@@ -447,13 +447,13 @@ val get_approx_birth_date_place :
   config ->
   Geneweb_db.Driver.base ->
   Geneweb_db.Driver.person ->
-  date option * Adef.safe_string
+  Adef.date option * Adef.safe_string
 
 val get_approx_death_date_place :
   config ->
   Geneweb_db.Driver.base ->
   Geneweb_db.Driver.person ->
-  date option * Adef.safe_string
+  Adef.date option * Adef.safe_string
 
 type ('a, 'b) format2 = ('a, unit, string, 'b) format4
 
@@ -770,8 +770,9 @@ val safe_html : string -> Adef.safe_string
 
 val string_with_macros :
   config -> (char * (unit -> string)) list -> string -> string
-(** [string_with_macros conf env s] Return a string with "%xxx" macro replaced
-    by their value. *)
+(** [string_with_macros conf env s] Return a string with "%x" macro (single
+    letter) replaced by their value. Special case for %vxxx which expands to the
+    value of var_xxx from base environment *)
 
 val is_empty_name : Geneweb_db.Driver.person -> bool
 (** [is_empty_name p] [false] if we knwon the first name or the last name of

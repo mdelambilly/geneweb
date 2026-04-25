@@ -10,6 +10,10 @@ module Log = (val Logs.src_log src : Logs.LOG)
 module Driver = Geneweb_db.Driver
 module Gutil = Geneweb_db.Gutil
 
+(* [deprecated] TYPE=album is accepted on read for backward compatibility
+   with notes, all new notes always write TYPE=gallery. *)
+let norm_type = function "album" -> "gallery" | t -> t
+
 let is_ancestor conf base anc =
   let restrict_for_spouses =
     try List.assoc "restrict_for_spouses" conf.base_env = "yes"
@@ -73,10 +77,11 @@ let rec is_restricted conf base anc_l =
       if is_ancestor conf base anc then false else is_restricted conf base l
 
 let print_search_form conf from_note =
-  Output.print_sstring conf "<div class=\"form-group mt-3\">\n";
-  Output.printf conf "<form method=\"get\" action=\"%s\">\n" conf.command;
+  Output.printf conf
+    {|<div class="mt-3">
+<form class="d-flex align-items-center gap-2" method="get" action="%s">|}
+    conf.command;
   hidden_env conf;
-  Output.print_sstring conf "<div class=\"form-check form-check-inline\">";
   Output.print_sstring conf
     {|<input type="hidden" name="m" value="MISC_NOTES_SEARCH">|};
   (match from_note with
@@ -85,20 +90,21 @@ let print_search_form conf from_note =
       Output.print_string conf (Util.escape_html n);
       Output.print_sstring conf {|">|}
   | None -> ());
-  Output.print_sstring conf {|<input type="text" name="s" size="40"|};
-  Output.print_sstring conf {| class="form-control col-8" value="|};
+  Output.print_sstring conf
+    {|<input type="text" name="s" size="40" class="form-control w-auto" value="|};
   (match p_getenv conf.env "s" with
   | Some s -> Output.print_string conf (Util.escape_html s)
   | None -> ());
   Output.print_sstring conf "\">";
-  Output.print_sstring conf "<input type=\"checkbox\" name=\"c\" value=\"on\"";
-  Output.printf conf " class=\"form-check-input ml-2\" id=\"case\"%s>"
+  Output.print_sstring conf {|<div class="form-check form-check-inline mb-0">|};
+  Output.printf conf
+    {|<input type="checkbox" name="c" value="on" class="form-check-input" id="case"%s>|}
     (match p_getenv conf.env "c" with
     | Some "on" -> " checked"
     | Some _ | None -> "");
-  Output.print_sstring conf "<label class=\"form-check-label\" for=\"case\">";
-  Output.printf conf "%s" (transl_nth conf "search/case sensitive" 1);
-  Output.print_sstring conf "</label></div>\n";
+  Output.printf conf {|<label class="form-check-label" for="case">%s</label>|}
+    (transl_nth conf "search/case sensitive" 1);
+  Output.print_sstring conf "</div>";
   Output.print_sstring conf {|<button type="submit" class="btn btn-primary">|};
   transl_nth conf "search/case sensitive" 0
   |> Utf8.capitalize_fst |> Output.print_sstring conf;
@@ -131,7 +137,7 @@ let print_whole_notes conf base fnotes (title : Adef.safe_string) s ho =
       Format.sprintf
         {|
  <a href="%sm=NOTES&f=%s&ref=on"
-     class="align-self-center ml-3 mb-1"
+     class="align-self-center ms-3 mb-1"
      title="%s">(<-)</a>|}
         (commd conf :> string)
         (fnotes :> string)
@@ -193,7 +199,16 @@ let fmt_fnote_title conf base fnotes =
     if String.trim fnote_title = "" then no_title else fnote_title
   with Not_found -> no_title
 
-let linked_page_rows conf base pg pgl =
+let person_query_suffix conf base = function
+  | None -> ""
+  | Some p -> "&" ^ (Util.acces conf base p :> string)
+
+let person_to_key base p =
+  let fn = Name.lower (Driver.sou base (Driver.get_first_name p)) in
+  let sn = Name.lower (Driver.sou base (Driver.get_surname p)) in
+  (fn, sn, Driver.get_occ p)
+
+let linked_page_rows conf base ?person pg pgl =
   let typ = p_getenv conf.env "type" in
   match (pg, typ) with
   | Def.NLDB.PgInd ip, _ ->
@@ -264,7 +279,12 @@ let linked_page_rows conf base pg pgl =
            (Util.safe_html fnote_title :> string))
   | Def.NLDB.PgMisc fnotes, typ ->
       let nenv, _ = read_notes base fnotes in
-      let n_type = try List.assoc "TYPE" nenv with Not_found -> "" in
+      let n_type =
+        try norm_type (List.assoc "TYPE" nenv) with Not_found -> ""
+      in
+      let kq =
+        if n_type = "gallery" then person_query_suffix conf base person else ""
+      in
       if match typ with Some t when t = "" -> t = n_type | _ -> true then (
         let fnote_title = fmt_fnote_title conf base fnotes in
         if conf.wizard then
@@ -272,28 +292,26 @@ let linked_page_rows conf base pg pgl =
             (Format.sprintf
                {|
 <td class="text-center">
-  <a href="%sm=MOD_NOTES&f=%s" title="%s"><i class="%s"></i></a>
+  <a href="%sm=MOD_NOTES&f=%s%s" title="%s"><i class="%s"></i></a>
 </td>|}
                (commd conf :> string)
-               (Util.uri_encode fnotes)
+               (Util.uri_encode fnotes) kq
                (Utf8.capitalize_fst
                   (transl conf
                      (if n_type = "gallery" then "modify gallery"
-                      else if n_type = "album" then "modify album"
                       else "modify note")))
-               (if n_type = "gallery" || n_type = "album" then
-                  "far fa-image fa-fw"
+               (if n_type = "gallery" then "far fa-image fa-fw"
                 else "far fa-file-lines fa-fw"));
         Output.print_sstring conf
           (Format.sprintf
              {|
-<td><a href="%sm=NOTES&f=%s">%s</a></td>
+<td><a href="%sm=NOTES&f=%s%s">%s</a></td>
 <td>%s</td>%s|}
              (commd conf :> string)
-             (Util.uri_encode fnotes)
+             (Util.uri_encode fnotes) kq
              (fnotes :> string)
              (Util.safe_html fnote_title :> string)
-             (if pgl then
+             (if pgl || n_type = "gallery" then
                 Format.sprintf
                   {|
 <td><a href="%sm=NOTES&f=%s&ref=on"
@@ -325,22 +343,35 @@ let linked_page_rows conf base pg pgl =
            (wizname :> string)
            (Utf8.capitalize_fst (transl conf "base wizard notes")))
 
-let create_gallery_item conf fnotes nenv s =
-  let img_url, img_name = Notes.json_extract_img conf s
-  and title = try List.assoc "TITLE" nenv with Not_found -> "" in
+let create_gallery_item_idx conf base person fnotes title
+    (img_idx, img_url, _img_name, desc) =
+  let max_len = 40 in
+  let caption =
+    match (title, desc) with
+    | "", "" -> fnotes
+    | t, "" -> t
+    | "", d -> d
+    | t, d ->
+        let s = t ^ " | " ^ d in
+        if String.length s > max_len then String.sub s 0 (max_len - 1) ^ "…"
+        else s
+  in
+  let img_param = Printf.sprintf "&img=%d" img_idx in
+  let kq = person_query_suffix conf base person in
   Printf.sprintf
-    {|<div class="imap-gallery"><a href="%sm=NOTES&f=%s"><img src="%s" \
-       title="%s | %s" alt="%s"></a>%s</div>|}
+    {|<div class="imap-gallery"><a href="%sm=NOTES&f=%s%s%s"><img src="%s" title="%s" alt="%s"><div class="gallery-legend">%s</div></a></div>|}
     (commd conf :> string)
-    fnotes img_url fnotes img_name img_name title
+    (Util.uri_encode fnotes) kq img_param img_url fnotes fnotes caption
 
-let print_linked_list_gallery conf base pgl =
+let print_linked_list_gallery conf base ?person pgl =
   Output.printf conf "<div class=\"d-flex flex-wrap mt-3\">\n";
   List.iter
     (function
       | Def.NLDB.PgMisc fnotes ->
           let nenv, s = read_notes base fnotes in
-          let typ = try List.assoc "TYPE" nenv with Not_found -> "" in
+          let typ =
+            try norm_type (List.assoc "TYPE" nenv) with Not_found -> ""
+          in
           let restrict_l =
             try List.assoc "RESTRICT" nenv with Not_found -> ""
           in
@@ -349,14 +380,31 @@ let print_linked_list_gallery conf base pgl =
           in
           if
             (restrict_l = [] || not (is_restricted conf base restrict_l))
-            && (typ = "gallery" || typ = "album")
+            && typ = "gallery"
           then
-            Output.print_sstring conf (create_gallery_item conf fnotes nenv s)
+            let title = try List.assoc "TITLE" nenv with Not_found -> "" in
+            let items =
+              match person with
+              | Some p ->
+                  Notes.json_gallery_items_for_key conf s (person_to_key base p)
+              | None -> []
+            in
+            let items =
+              if items <> [] then items
+              else
+                let u, n = Notes.json_extract_img conf s in
+                [ (1, u, n, "") ]
+            in
+            List.iter
+              (fun item ->
+                Output.print_sstring conf
+                  (create_gallery_item_idx conf base person fnotes title item))
+              items
       | _ -> ())
     pgl;
   Output.print_sstring conf "</div>\n"
 
-let print_linked_list_standard conf base pgl =
+let print_linked_list_standard conf base ?person pgl =
   let db = notes_links_db conf base false in
   Output.print_sstring conf
     "\n<table class=\"table table-borderless table-striped w-auto mt-3\">";
@@ -378,20 +426,19 @@ let print_linked_list_standard conf base pgl =
               | Some _ -> true
               | None -> false
             in
-            linked_page_rows conf base pg pgl;
+            linked_page_rows conf base ?person pg pgl;
             Output.print_sstring conf "</tr>\n")
       | _ ->
           Output.print_sstring conf "\n<tr>";
-          linked_page_rows conf base pg false;
+          linked_page_rows conf base ?person pg false;
           Output.print_sstring conf "</tr>\n")
     pgl;
   Output.print_sstring conf "</table>"
 
-let print_linked_list conf base pgl =
+let print_linked_list conf base ?person pgl =
   match p_getenv conf.env "type" with
-  | Some "gallery" -> print_linked_list_gallery conf base pgl
-  | Some "album" -> print_linked_list_gallery conf base pgl
-  | _ -> print_linked_list_standard conf base pgl
+  | Some "gallery" -> print_linked_list_gallery conf base ?person pgl
+  | _ -> print_linked_list_standard conf base ?person pgl
 
 (* copied from perso.ml *)
 let simple_person_text conf base p p_auth : Adef.safe_string =
@@ -404,19 +451,14 @@ let simple_person_text conf base p p_auth : Adef.safe_string =
 
 let print_what_links_p conf base p =
   if authorized_age conf base p then (
-    let key =
-      let fn = Name.lower (Driver.sou base (Driver.get_first_name p)) in
-      let sn = Name.lower (Driver.sou base (Driver.get_surname p)) in
-      (fn, sn, Driver.get_occ p)
-    in
+    let key = person_to_key base p in
     let db = Driver.read_nldb base in
     let db = Notes.merge_possible_aliases conf db in
     let pgl = Notes.links_to_ind conf base db key None in
     let title h =
       let lnkd_typ, lnkd_typ_help =
         match p_getenv conf.env "type" with
-        | Some "gallery" | Some "album" ->
-            ("linked albums", "linked albums help")
+        | Some "gallery" -> ("linked galleries", "linked galleries help")
         | _ -> ("linked pages", "linked pages help")
       in
       Format.sprintf {|<span title="%s">%s</span>|}
@@ -435,7 +477,7 @@ let print_what_links_p conf base p =
         Output.print_sstring conf {|</a>|})
     in
     Hutil.header conf title;
-    print_linked_list conf base pgl;
+    print_linked_list conf base ~person:p pgl;
     Hutil.trailer conf)
   else Hutil.incorrect_request conf
 
@@ -475,8 +517,8 @@ let read_notes_from_conf conf base =
 let print_json conf base =
   let nenv, s = read_notes_from_conf conf base in
   let s =
-    match List.assoc "TYPE" nenv with
-    | "album" | "gallery" -> Notes.safe_gallery conf base s
+    match norm_type (List.assoc "TYPE" nenv) with
+    | "gallery" -> Notes.safe_gallery conf base s
     | (exception Not_found) | _ -> s
   in
   Output.print_sstring conf s
@@ -496,9 +538,8 @@ let print conf base =
     Output.print_sstring conf
       (transl conf "note is restricted" |> Utf8.capitalize_fst)
   else
-    match List.assoc "TYPE" nenv with
-    | "album" | "gallery" ->
-        Templ.output_simple conf Templ.Env.empty "notes_gallery"
+    match norm_type (List.assoc "TYPE" nenv) with
+    | "gallery" -> Templ.output_simple conf Templ.Env.empty "notes_gallery"
     | (exception Not_found) | _ -> (
         let title = try List.assoc "TITLE" nenv with Not_found -> "" in
         let title = Util.safe_html title in
@@ -532,9 +573,9 @@ let print_mod conf base =
     Output.print_sstring conf
       (transl conf "note is restricted" |> Utf8.capitalize_fst)
   else
-    match List.assoc "TYPE" nenv with
-    | ("gallery" | "album") as typ ->
-        Templ.output_simple conf Templ.Env.empty ("notes_upd_" ^ typ)
+    match norm_type (List.assoc "TYPE" nenv) with
+    | "gallery" when p_getenv conf.env "raw" = None ->
+        Templ.output_simple conf Templ.Env.empty "notes_upd_gallery"
     | (exception Not_found) | _ ->
         let title _ =
           Output.print_sstring conf
@@ -633,8 +674,8 @@ let format_folder_entry conf depth r path_to is_current is_path view =
   let content =
     if is_current then
       Format.sprintf
-        {|<span class="text-muted">
-          <i class="far fa-folder-open fa-fw mr-2"></i>%s</span>|}
+        {|<span class="text-body-secondary">
+          <i class="far fa-folder-open fa-fw me-2"></i>%s</span>|}
         (Util.escape_html r :> string)
     else
       let title_attr =
@@ -649,13 +690,13 @@ let format_folder_entry conf depth r path_to is_current is_path view =
       if view then
         Format.sprintf
           {|<a href="%sm=MISC_NOTES&d=%s"%s>
-            <i class="far fa-folder-open fa-fw mr-2"></i>%s</a>|}
+            <i class="far fa-folder-open fa-fw me-2"></i>%s</a>|}
           (commd conf :> string)
           (Mutil.encode path_to :> string)
           title_attr
           (Util.escape_html r :> string)
       else
-        Format.sprintf {|<i class="far fa-folder-open fa-fw mr-2"%s></i>%s|}
+        Format.sprintf {|<i class="far fa-folder-open fa-fw me-2"%s></i>%s|}
           title_attr
           (Util.escape_html r :> string)
   in
@@ -681,7 +722,7 @@ let format_file_entry conf depth d f n_type title view =
     Format.sprintf
       {|<div class="mt-1"%s>
          <a class="%s" href="%sm=%sNOTES&f=%s">
-           <i class="far fa-%s fa-fw mr-2"></i>%s</a>%s</div>|}
+           <i class="far fa-%s fa-fw me-2"></i>%s</a>%s</div>|}
       margin color
       (commd conf :> string)
       mod_edit
@@ -689,13 +730,13 @@ let format_file_entry conf depth d f n_type title view =
       icon
       (Util.escape_html f :> string)
       (if (title :> string) <> "" then
-         Format.sprintf {|<span class="text-muted ml-2">%s</span>|}
+         Format.sprintf {|<span class="text-body-secondary ms-2">%s</span>|}
            (title :> string)
        else "")
   else
     Format.sprintf
       {|<div class="mt-2"%s>
-         <i class="far fa-%s fa-fw mr-2"></i>
+         <i class="far fa-%s fa-fw me-2"></i>
          <span class="text">%s</span></div>|}
       margin icon
       (Util.escape_html f :> string)
@@ -705,7 +746,7 @@ let format_back_button conf d =
   Format.sprintf
     {|<div class="mb-3">
         <a href="%sm=MISC_NOTES%s" class="btn btn-outline-primary">
-          <i class="fa fa-arrow-left mr-2"></i>%s</a></div>|}
+          <i class="fa fa-arrow-left me-2"></i>%s</a></div>|}
     (commd conf :> string)
     (match String.rindex_opt d NotesLinks.char_dir_sep with
     | Some i -> "&d=" ^ String.sub d 0 i
@@ -740,7 +781,7 @@ let print_misc_notes conf base =
   Hutil.header conf (fun _ -> ());
   Output.print_sstring conf
     (Format.sprintf
-       {|<h1 class="mb-3" title="%s"><i class="far fa-clipboard fa-sm mr-3"></i>%s</h1>|}
+       {|<h1 class="mb-3" title="%s"><i class="far fa-clipboard fa-sm me-3"></i>%s</h1>|}
        (transl conf "miscellaneous notes help" |> Utf8.capitalize_fst)
        (if d <> "" then d
         else transl conf "miscellaneous notes" |> Utf8.capitalize_fst));
@@ -815,7 +856,7 @@ let print_misc_notes conf base =
       format_folder_entry conf 0 ".." "" false true true
       |> Output.print_sstring conf;
       path_hierarchy d);
-    Output.print_sstring conf {|<div class="ml-2">|};
+    Output.print_sstring conf {|<div class="ms-2">|};
     List.iter (fun d -> one_folder d true) dirs_in_db;
     List.iter (fun f -> one_file f true) files_in_db;
     Output.print_sstring conf "</div>");
@@ -843,7 +884,7 @@ let print_misc_notes conf base =
       ([], []) ls
   in
   if dirs <> [] || files <> [] then (
-    Output.print_sstring conf {|<div class="ml-2">|};
+    Output.print_sstring conf {|<div class="ms-2">|};
     Output.print_sstring conf
       (Format.sprintf
          {|<h2 class="h3 mt-3 mb-1" title="%s">%s

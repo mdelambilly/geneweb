@@ -4,7 +4,7 @@ open Def
 
 exception Same_person
 
-module IperSet = Driver.Iper.Set
+module Iper = Driver.Iper
 
 let is_ancestor ?max base p1 p2 =
   let ip1 = Driver.get_iper p1 in
@@ -15,10 +15,10 @@ let is_ancestor ?max base p1 p2 =
       | [] -> false
       | ip :: tl -> (
           if Option.is_some max && n <= 0 then false
-          else if IperSet.mem ip set then loop n set tl
+          else if Iper.Set.mem ip set then loop n set tl
           else if ip = ip1 then true
           else
-            let set = IperSet.add ip set in
+            let set = Iper.Set.add ip set in
             match Driver.get_parents (Driver.poi base ip) with
             | Some ifam ->
                 let cpl = Driver.foi base ifam in
@@ -27,20 +27,12 @@ let is_ancestor ?max base p1 p2 =
             | None -> loop n set tl)
     in
     let n = Option.value ~default:max_int max in
-    loop n IperSet.empty [ ip2 ]
+    loop n Iper.Set.empty [ ip2 ]
 
 let designation base p =
   let first_name = Driver.p_first_name base p in
   let nom = Driver.p_surname base p in
   first_name ^ "." ^ string_of_int (Driver.get_occ p) ^ " " ^ nom
-
-let father = Adef.father
-let mother = Adef.mother
-
-let couple multi fath moth =
-  if not multi then Adef.couple fath moth else Adef.multi_couple fath moth
-
-let parent_array = Adef.parent_array
 
 let spouse ip cpl =
   if ip = Driver.get_father cpl then Driver.get_mother cpl
@@ -228,23 +220,6 @@ let alphabetic n1 n2 =
   alphabetic_iso_8859_1 n1 n2
 
 let alphabetic_order n1 n2 = alphabetic_utf_8 n1 n2
-
-let arg_list_of_string line =
-  let rec loop list i len quote =
-    if i = String.length line then
-      if len = 0 then List.rev list else List.rev (Buff.get len :: list)
-    else
-      match (quote, line.[i]) with
-      | Some c1, c2 ->
-          if c1 = c2 then loop list (i + 1) len None
-          else loop list (i + 1) (Buff.store len c2) quote
-      | None, ' ' ->
-          let list = if len = 0 then list else Buff.get len :: list in
-          loop list (i + 1) 0 quote
-      | None, (('"' | '\'') as c) -> loop list (i + 1) 0 (Some c)
-      | None, c -> loop list (i + 1) (Buff.store len c) None
-  in
-  loop [] 0 0 None
 
 let sort_person_list_aux sort base =
   let default p1 p2 =

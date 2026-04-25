@@ -1,4 +1,4 @@
-(* $Id: merge.ml, v7-exp 2018-09-26 07:34:44 ddr Exp $ *)
+(* $Id: merge.ml, v7.1 04/03/2026 00:11:35 *)
 (* Copyright (c) 1998-2007 INRIA *)
 
 open Config
@@ -11,6 +11,28 @@ let print_someone conf base p =
     (Driver.p_first_name base p)
     (if Driver.get_occ p = 0 then "" else "." ^ string_of_int (Driver.get_occ p))
     (Driver.p_surname base p)
+
+let print_person_info conf base p =
+  Output.print_sstring conf {|<a href="|};
+  Output.print_string conf (commd conf);
+  Output.print_string conf (acces conf base p);
+  Output.print_sstring conf {|">|};
+  Output.print_string conf (escape_html (Driver.p_first_name base p));
+  if Driver.get_occ p <> 0 then (
+    Output.print_sstring conf ".";
+    Output.print_sstring conf (string_of_int (Driver.get_occ p)));
+  Output.print_sstring conf " ";
+  Output.print_string conf (escape_html (Driver.p_surname base p));
+  Output.print_sstring conf "</a>";
+  let dates = DateDisplay.short_dates_text conf base p in
+  if (dates :> string) <> "" then
+    Output.print_string conf (mod_ind_link conf p dates);
+  let cop = (child_of_parent conf base p :> string) in
+  if cop <> "" then (
+    Output.print_sstring conf ", ";
+    Output.print_sstring conf cop);
+  let hw = (husband_wife conf base p true :> string) in
+  if hw <> "" then Output.print_sstring conf hw
 
 let print conf base p =
   let list = Gutil.find_same_name base p in
@@ -25,74 +47,54 @@ let print conf base p =
       (Utf8.capitalize_fst (transl_decline conf "merge" ""))
   in
   Hutil.header conf title;
+  Output.print_sstring conf "<h2 class=\"h4\">\n";
+  print_person_info conf base p;
+  Output.print_sstring conf " ";
+  Output.print_sstring conf (transl_decline conf "with" "");
+  Output.print_sstring conf (transl conf ":");
+  Output.print_sstring conf "\n</h2>\n";
   Output.print_sstring conf
-    (Format.sprintf
-       {|<h2>
-%s%s %s %s%s
-</h2>
-<form method="get" action="%s" class="mx-3 mb-3">|}
-       (Driver.p_first_name base p)
-       (if Driver.get_occ p = 0 then ""
-        else "." ^ string_of_int (Driver.get_occ p))
-       (Driver.p_surname base p)
-       (transl_decline conf "with" "")
-       (transl conf ":")
+    (Format.sprintf {|<form method="get" action="%s" class="mx-3 mb-3">|}
        (conf.command :> string));
   Util.hidden_env conf;
   Util.hidden_input conf "m" (Adef.encoded "MRG_IND");
   Util.hidden_input conf "i"
     (Driver.get_iper p |> Driver.Iper.to_string |> Mutil.encode);
+  let ph =
+    Format.sprintf "%s.%s %s"
+      (transl_nth conf "first name/first names" 0)
+      (transl conf "number")
+      (transl_nth conf "surname/surnames" 0)
+  in
   Output.print_sstring conf
-    "<span class=\"form-row align-items-center\"><span \
-     class=\"col-auto\"><span class=\"custom-control custom-radio\"><input \
-     type=\"radio\" class=\"custom-control-input\" name=\"select\" \
-     id=\"input\" value=\"input\" checked><label \
-     class=\"custom-control-label\"for=\"input\">";
+    {|<div class="form-check d-flex align-items-center gap-2 mb-2">|};
+  Output.print_sstring conf
+    {|<input class="form-check-input" type="radio" name="select" id="input" value="input" checked>|};
+  Output.print_sstring conf
+    {|<label class="form-check-label text-nowrap" for="input">|};
   Output.print_sstring conf (transl conf "any individual in the base");
-  Output.print_sstring conf
-    "</label></span></span><span class=\"col-auto\"><input type=\"text\" \
-     class=\"form-control\" name=\"n\" placeholder=\"";
-  Output.print_sstring conf (transl_nth conf "first name/first names" 0);
-  Output.print_sstring conf ".";
-  Output.print_sstring conf (transl conf "number");
-  Output.print_sstring conf " ";
-  Output.print_sstring conf (transl_nth conf "surname/surnames" 0);
-  Output.print_sstring conf "\" title=\"";
-  Output.print_sstring conf (transl_nth conf "first name/first names" 0);
-  Output.print_sstring conf ".";
-  Output.print_sstring conf (transl conf "number");
-  Output.print_sstring conf " ";
-  Output.print_sstring conf (transl_nth conf "surname/surnames" 0);
-  Output.print_sstring conf
-    "\" size=\"50\" id=\"inlineinput\" autofocus></span></span>";
+  Output.print_sstring conf {|</label>|};
+  Output.printf conf
+    {|<input type="text" class="form-control form-control-sm w-auto" name="n" id="inlineinput" placeholder="%s" title="%s" size="50" autofocus>|}
+    ph ph;
+  Output.print_sstring conf {|</div>|};
   if list <> [] then
     List.iter
       (fun p ->
-        Output.print_sstring conf "<div class=\"custom-control custom-radio\">";
+        Output.print_sstring conf {|<div class="form-check ms-1">|};
         Output.print_sstring conf
-          "<input type=\"radio\" class=\"custom-control-input\" \
-           name=\"select\" id=\"";
+          {|<input type="radio" class="form-check-input" name="select" id="|};
         Output.print_string conf
           (Driver.get_iper p |> Driver.Iper.to_string |> Mutil.encode);
-        Output.print_sstring conf "\" value=\"";
+        Output.print_sstring conf {|" value="|};
         Output.print_string conf
           (Driver.get_iper p |> Driver.Iper.to_string |> Mutil.encode);
-        Output.print_sstring conf "\">\n";
-        Output.print_sstring conf "<label class=\"custom-control-label\" for=\"";
+        Output.print_sstring conf {|"><label class="form-check-label" for="|};
         Output.print_string conf
           (Driver.get_iper p |> Driver.Iper.to_string |> Mutil.encode);
-        Output.print_sstring conf "\">";
-        let cop = (Util.child_of_parent conf base p :> string) in
-        let cop = if cop = "" then "" else ", " ^ cop in
-        let hbw = (Util.husband_wife conf base p true :> string) in
-        let hbw = if hbw = "" then "" else ", " ^ hbw in
-        Output.print_sstring conf
-          (Printf.sprintf "%s.%d %s%s%s"
-             (Driver.get_first_name p |> Driver.sou base)
-             (Driver.get_occ p)
-             (Driver.get_surname p |> Driver.sou base)
-             cop hbw);
-        Output.print_sstring conf "</label></div>")
+        Output.print_sstring conf {|">|};
+        print_person_info conf base p;
+        Output.print_sstring conf {|</label></div>|})
       list;
   Output.print_sstring conf
     {|<button type="submit" class="btn btn-primary btn-lg mt-2">|};

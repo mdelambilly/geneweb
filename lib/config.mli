@@ -1,5 +1,3 @@
-open Def
-
 (** Authentication scheme data type *)
 type auth_scheme_kind =
   | NoAuth
@@ -35,7 +33,7 @@ and digest_auth_scheme = {
 (** Digest authentication scheme inside {i Autorization} HTTP header *)
 
 type output_conf = {
-  status : Def.httpStatus -> unit;
+  status : Geneweb_http.Code.status -> unit;
   header : string -> unit;
   body : string -> unit;
   flush : unit -> unit;
@@ -70,7 +68,6 @@ type config = {
   default_lang : string;
   browser_lang : string;
   default_sosa_ref : Geneweb_db.Driver.iper * Geneweb_db.Driver.person option;
-  multi_parents : bool;
   authorized_wizards_notes : bool;
   public_if_titles : bool;
   public_if_no_date : bool;
@@ -102,7 +99,7 @@ type config = {
   auth_file : string;
   border : int;
   mutable n_connect : (int * int * int * (string * float) list) option;
-  today : dmy;
+  today : Adef.dmy;
   today_wd : int;
   time : int * int * int;
   ctime : float;

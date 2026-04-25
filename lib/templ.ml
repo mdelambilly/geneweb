@@ -7,6 +7,7 @@ module Ast = Geneweb_templ.Ast
 module Loc = Geneweb_templ.Loc
 module Driver = Geneweb_db.Driver
 
+exception UnboundVar
 exception BadApplyArity
 exception NamedArgumentNotMatched of string
 
@@ -31,7 +32,8 @@ let pp_exception ppf (e, bt) =
   in
   match e with
   | Exc_located (loc, e) ->
-      Fmt.pf ppf "@[%a@ %s@ %a@]" pp_header () (Printexc.to_string e) Loc.pp loc
+      Fmt.pf ppf "@[%a@ %s@ %a@]" pp_header () (Printexc.to_string e)
+        Loc.pp_with_source loc
   | _ ->
       Fmt.pf ppf "@[%a@ %s@ %a@]" pp_header () (Printexc.to_string e)
         Fmt.(list ~sep:cut string)
@@ -183,6 +185,16 @@ let rec eval_variable (conf : Config.config) = function
       in
       func conf.lang Version.available_languages 0
   | [ "bvar"; "list" ] ->
+      let wizard_only =
+        [
+          "friend_passwd";
+          "wizard_passwd";
+          "manitou";
+          "supervisor";
+          "friend_passwd_file";
+          "wizard_passwd_file";
+        ]
+      in
       let is_duplicate key assoc_list =
         let rec aux count = function
           | [] -> count > 1
@@ -191,7 +203,9 @@ let rec eval_variable (conf : Config.config) = function
         aux 0 assoc_list
       in
       let l =
-        List.sort (fun (k1, _v1) (k2, _v2) -> compare k1 k2) conf.base_env
+        if List.assoc "sort_bvar_entries" conf.base_env = "no" then
+          conf.base_env
+        else List.sort (fun (k1, _v1) (k2, _v2) -> compare k1 k2) conf.base_env
       in
       List.fold_left
         (fun acc (k, v) ->
@@ -200,8 +214,11 @@ let rec eval_variable (conf : Config.config) = function
           in
           acc
           ^ Format.sprintf "<b%s>%s</b>=%s<br>\n" duplicate k
-              (Util.escape_html v :> string))
-        "" conf.base_env
+              (if conf.wizard || not (List.mem k wizard_only) then
+                 (Util.escape_html v :> string)
+               else if (Util.escape_html v :> string) = "" then ""
+               else "####"))
+        "" l
   | [ "gwd"; "arglist" ] -> !GWPARAM.gwd_cmd
   | [ "bvar"; v ] | [ "b"; v ] -> (
       try List.assoc v conf.base_env with Not_found -> "")
@@ -404,6 +421,7 @@ and eval_simple_variable conf = function
   | "prefix_no_lang" -> (Util.commd ~excl:[ "lang" ] conf :> string)
   | "prefix_no_all" ->
       (Util.commd ~excl:[ "templ"; "p_mod"; "wide" ] conf :> string)
+  | "prefix_no_senv" -> (Util.commd ~senv:false conf :> string)
   | "referer" -> (Util.get_referer conf :> string)
   | "right" -> conf.right
   | "sosa_ref" -> (
@@ -422,7 +440,7 @@ and eval_simple_variable conf = function
       let s = (s :> string) in
       if s = "" then s else s ^ "/"
   | "suffix" ->
-      (* On supprime de env toutes les paires qui sont dans (henv @ senv) *)
+      Log.warn (fun k -> k "%%suffix; is deprecated, use %%url_set instead");
       let l =
         List.fold_left
           (fun accu (k, _) -> List.remove_assoc k accu)
@@ -724,9 +742,7 @@ let rec eval_expr ((conf, eval_var, eval_apply) as ceva) Ast.{ desc; loc } =
       try eval_var loc (s :: sl)
       with Not_found -> (
         try templ_eval_var conf (s :: sl)
-        with Not_found ->
-          raise_with_loc loc
-            (Failure ("unbound var: " ^ String.concat "." (s :: sl)))))
+        with Not_found -> raise_with_loc loc UnboundVar))
   | Atransl (upp, s, c) -> VVstring (eval_transl conf upp s c)
   | Aapply (s, ell) ->
       let vl =
@@ -1376,22 +1392,46 @@ and print_simple_variable conf = function
       let query_time = Unix.gettimeofday () -. conf.query_start in
       Util.time_debug conf query_time !GWPARAM.nb_errors !GWPARAM.errors_undef
         !GWPARAM.errors_other !GWPARAM.set_vars
-  | "src_images_list" ->
+  | "src_albums_list" -> (
+      let dir = !GWPARAM.albums_d conf.bname in
+      let collect entry acc =
+        match entry with
+        | Filesystem.Dir path ->
+            let name = Filename.basename path in
+            if name <> "" && name.[0] <> '.' then name :: acc else acc
+        | Filesystem.File _ | Filesystem.Exn _ -> acc
+      in
+      try
+        Filesystem.walk_folder collect dir []
+        |> List.sort String.compare
+        |> List.iter (fun f ->
+            Output.printf conf "<option>%s\n" (Util.escape_html f :> string))
+      with
+      | Sys_error msg ->
+          Log.warn (fun k -> k "src_albums_list: %s (%s)" msg dir)
+      | Unix.Unix_error (err, _, _) ->
+          Log.warn (fun k ->
+              k "src_albums_list: %s (%s)" (Unix.error_message err) dir))
+  | "src_images_list" -> (
       let dir = !GWPARAM.images_d conf.bname in
-      let f_list = Sys.readdir dir |> Array.to_list |> List.sort compare in
-      let res =
-        List.fold_left
-          (fun acc f ->
+      try
+        let f_list = Sys.readdir dir |> Array.to_list |> List.sort compare in
+        List.iter
+          (fun f ->
             let full_path = Filename.concat dir f in
             if
               (Unix.stat full_path).st_kind = Unix.S_REG
               && f.[0] <> '.'
               && f.[0] <> '~'
-            then acc ^ Format.sprintf "<option>%s\n" f
-            else acc)
-          "" f_list
-      in
-      Output.print_sstring conf res
+            then
+              Output.printf conf "<option>%s\n" (Util.escape_html f :> string))
+          f_list
+      with
+      | Sys_error msg ->
+          Log.warn (fun k -> k "src_images_list: %s (%s)" msg dir)
+      | Unix.Unix_error (err, _, _) ->
+          Log.warn (fun k ->
+              k "src_images_list: %s (%s)" (Unix.error_message err) dir))
   | _ -> raise Not_found
 
 and print_variable conf sl =

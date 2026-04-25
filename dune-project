@@ -19,9 +19,11 @@
   (sites (share hd))
   (depends
     (ocaml (>= 4.10))
+    geneweb-compat
+    geneweb-http
     (alcotest :with-test)
     benchmark
-    (calendars (= "1.0.0"))
+    (calendars (>= "2.0.0"))
     (camlp5 (>= "8.03.00"))
     camlp-streams
     cppo
@@ -29,6 +31,7 @@
     fmt
     logs
     logs-syslog
+    ptime
     jingoo
     markup
     ounit
@@ -36,7 +39,7 @@
     ppx_deriving
     ppx_import
     stdlib-shims
-    (unidecode (= "0.2.0"))
+    (unidecode (>= "0.5.0"))
     uri
     uucp
     uunf
@@ -45,9 +48,9 @@
     digestif
     pp_loc
     dune-site
-    xdg
+    conf-brotli
     (utop :with-dev-setup)
-    (ocamlformat (and :with-dev-setup (= "0.28.1")))
+    (ocamlformat (and :with-dev-setup (= "0.29.0")))
   )
   (depopts
     (ancient (>= 0.10.0))
@@ -56,8 +59,25 @@
 )
 
 (package
+  (name geneweb-compat)
+  (synopsis "Geneweb library for legacy support")
+  (tags (geneweb legacy))
+  (depends
+    (ocaml (>= 4.10))))
+
+(package
+  (name geneweb-http)
+  (synopsis "Geneweb library for HTTP support")
+  (depends
+    (ocaml (>= 4.10))
+    camlp-streams
+    geneweb-compat
+    logs
+    fmt))
+
+(package
   (name geneweb-rpc)
-  (synopsis "RPC support for GeneWeb")
+  (synopsis "Geneweb library for RPC support")
   (tags (geneweb rpc json))
   (depends
     (ocaml (>= 4.10))

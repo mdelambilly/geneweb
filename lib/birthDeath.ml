@@ -13,15 +13,16 @@ let get_k conf =
       try int_of_string (List.assoc "latest_event" conf.base_env)
       with Not_found | Failure _ -> 20)
 
-let select (type a) (module Q : Pqueue.S with type elt = a * dmy * calendar)
-    nb_of iterator get get_date conf base =
+let select (type a)
+    (module Q : Pqueue.S with type elt = a * Adef.dmy * Adef.calendar) nb_of
+    iterator get get_date conf base =
   let n = min (max 0 (get_k conf)) (nb_of base) in
   let ref_date =
     match p_getint conf.env "by" with
     | Some by ->
         let bm = Option.value ~default:(-1) (p_getint conf.env "bm") in
         let bd = Option.value ~default:(-1) (p_getint conf.env "bd") in
-        Some { day = bd; month = bm; year = by; prec = Sure; delta = 0 }
+        Some { Adef.day = bd; month = bm; year = by; prec = Sure; delta = 0 }
     | None -> None
   in
   let q, len =
@@ -29,15 +30,16 @@ let select (type a) (module Q : Pqueue.S with type elt = a * dmy * calendar)
       (fun (q, len) i ->
         let x = get base i in
         match get_date x with
-        | Some (Dgreg (d, cal)) ->
+        | Some (Adef.Dgreg (d, cal)) ->
+            let d_greg = Date.approx_gregorian ~from:cal d in
             let aft =
               match ref_date with
-              | Some ref_date -> Date.compare_dmy ref_date d <= 0
+              | Some ref_date -> Date.compare_dmy ref_date d_greg <= 0
               | None -> false
             in
             if aft then (q, len)
             else
-              let e = (x, d, cal) in
+              let e = (x, d_greg, cal) in
               if len < n then (Q.add e q, len + 1)
               else (snd (Q.take (Q.add e q)), len)
         | _ -> (q, len))
@@ -52,13 +54,13 @@ let select (type a) (module Q : Pqueue.S with type elt = a * dmy * calendar)
   loop [] q
 
 module PQ = Pqueue.Make (struct
-  type t = Geneweb_db.Driver.person * Def.dmy * Def.calendar
+  type t = Geneweb_db.Driver.person * Adef.dmy * Adef.calendar
 
   let leq (_, x, _) (_, y, _) = Date.compare_dmy x y <= 0
 end)
 
 module PQ_oldest = Pqueue.Make (struct
-  type t = Geneweb_db.Driver.person * Def.dmy * Def.calendar
+  type t = Geneweb_db.Driver.person * Adef.dmy * Adef.calendar
 
   let leq (_, x, _) (_, y, _) = Date.compare_dmy y x <= 0
 end)
@@ -69,13 +71,13 @@ let select_person conf base get_date find_oldest =
     Driver.nb_of_persons Driver.ipers (pget conf) get_date conf base
 
 module FQ = Pqueue.Make (struct
-  type t = Geneweb_db.Driver.family * Def.dmy * Def.calendar
+  type t = Geneweb_db.Driver.family * Adef.dmy * Adef.calendar
 
   let leq (_, x, _) (_, y, _) = Date.compare_dmy x y <= 0
 end)
 
 module FQ_oldest = Pqueue.Make (struct
-  type t = Geneweb_db.Driver.family * Def.dmy * Def.calendar
+  type t = Geneweb_db.Driver.family * Adef.dmy * Adef.calendar
 
   let leq (_, x, _) (_, y, _) = Date.compare_dmy y x <= 0
 end)
@@ -102,15 +104,40 @@ let make_population_pyramid ~nb_intervals ~interval ~limit ~at_date conf base =
         | Some dmy ->
             if Date.compare_dmy dmy at_date <= 0 then
               let a = Date.time_elapsed dmy at_date in
-              let j = min nb_intervals (a.year / interval) in
-              if
-                (dea = NotDead || (dea = DontKnowIfDead && a.year < limit))
-                ||
-                match Date.dmy_of_death dea with
-                | None -> false
-                | Some d -> Date.compare_dmy d at_date > 0
-              then
-                if sex = Male then men.(j) <- men.(j) + 1
-                else wom.(j) <- wom.(j) + 1)
+              if a.year >= 0 then
+                let j = min nb_intervals (a.year / interval) in
+                if
+                  (dea = NotDead || (dea = DontKnowIfDead && a.year < limit))
+                  ||
+                  match Date.dmy_of_death dea with
+                  | None -> false
+                  | Some d -> Date.compare_dmy d at_date > 0
+                then
+                  if sex = Male then men.(j) <- men.(j) + 1
+                  else wom.(j) <- wom.(j) + 1)
+    (Driver.ipers base);
+  (men, wom)
+
+let make_death_pyramid ~nb_intervals ~interval ~limit ~from_year ~to_year conf
+    base =
+  let men = Array.make (nb_intervals + 1) 0 in
+  let wom = Array.make (nb_intervals + 1) 0 in
+  Collection.iter
+    (fun i ->
+      let p = pget conf base i in
+      let sex = Driver.get_sex p in
+      if sex <> Neuter then
+        match Date.dmy_of_death (Driver.get_death p) with
+        | None -> ()
+        | Some dd -> (
+            if dd.year >= from_year && dd.year <= to_year then
+              match Date.cdate_to_dmy_opt (Driver.get_birth p) with
+              | None -> ()
+              | Some bd ->
+                  let a = Date.time_elapsed bd dd in
+                  if a.year >= 0 && (limit = 0 || a.year <= limit) then
+                    let j = min nb_intervals (a.year / interval) in
+                    if sex = Male then men.(j) <- men.(j) + 1
+                    else wom.(j) <- wom.(j) + 1))
     (Driver.ipers base);
   (men, wom)

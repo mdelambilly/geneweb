@@ -15,7 +15,7 @@ type update_error =
   | UERR_already_defined of Driver.base * Driver.person * string
   | UERR_own_ancestor of Driver.base * Driver.person
   | UERR_digest
-  | UERR_bad_date of Def.dmy
+  | UERR_bad_date of Adef.dmy
   | UERR_missing_field of Adef.safe_string
   | UERR_already_has_parents of Driver.base * Driver.person
   | UERR_missing_surname of Adef.safe_string
@@ -26,10 +26,10 @@ type update_error =
 exception ModErr of update_error
 
 type create_info = {
-  ci_birth_date : date option;
+  ci_birth_date : Adef.date option;
   ci_birth_place : string;
   ci_death : death;
-  ci_death_date : date option;
+  ci_death_date : Adef.date option;
   ci_death_place : string;
   ci_occupation : string;
   ci_public : bool;
@@ -52,7 +52,7 @@ let infer_death_from_cdate conf ?(max_age = maximum_lifespan) cdate =
 
 let infer_death_bb conf birth bapt =
   let infer_death_from_odate conf = function
-    | Some (Dgreg (d, _)) -> infer_death_from_dmy conf d
+    | Some (Adef.Dgreg (d, _)) -> infer_death_from_dmy conf d
     | Some (Dtext _) | None -> DontKnowIfDead
   in
   match infer_death_from_odate conf birth with
@@ -86,48 +86,62 @@ let infer_death_from_parents conf base fam =
   then OfCourseDead
   else DontKnowIfDead
 
-let rec infer_death conf base p =
-  let death =
-    infer_death_bb conf
-      (Date.od_of_cdate (Driver.get_birth p))
-      (Date.od_of_cdate (Driver.get_baptism p))
-  in
-  if death <> DontKnowIfDead then death
-  else
-    let death =
-      let families = Driver.get_family p in
-      let len = Array.length families in
-      let rec loop_families i =
-        if i = len then DontKnowIfDead
-        else
-          let fam = Driver.foi base families.(i) in
-          match Date.cdate_to_dmy_opt (Driver.get_marriage fam) with
-          | Some d -> infer_death_from_dmy conf d
-          | None ->
-              let death =
-                let children = Driver.get_children fam in
-                let len = Array.length children in
-                let rec loop_children j =
-                  if j = len then DontKnowIfDead
-                  else
-                    let death =
-                      infer_death conf base (Driver.poi base children.(j))
-                    in
-                    if death = OfCourseDead then OfCourseDead
-                    else loop_children (j + 1)
-                in
-                loop_children 0
-              in
-              if death = OfCourseDead then OfCourseDead
-              else loop_families (i + 1)
-      in
-      loop_families 0
-    in
-    if death <> DontKnowIfDead then death
+let infer_death conf base p =
+  let rec aux ~visited conf base p =
+    if Driver.Iper.Set.mem (Driver.get_iper p) visited then
+      (DontKnowIfDead, visited)
     else
-      match Driver.get_parents p with
-      | None -> DontKnowIfDead
-      | Some ifam -> infer_death_from_parents conf base (Driver.foi base ifam)
+      let visited = Driver.Iper.Set.add (Driver.get_iper p) visited in
+      let death =
+        infer_death_bb conf
+          (Date.od_of_cdate (Driver.get_birth p))
+          (Date.od_of_cdate (Driver.get_baptism p))
+      in
+      if death <> DontKnowIfDead then (death, visited)
+      else
+        let death, visited =
+          let families = Driver.get_family p in
+          let len = Array.length families in
+          let rec loop_families ~visited i =
+            if i = len then (DontKnowIfDead, visited)
+            else
+              let fam = Driver.foi base families.(i) in
+              match Date.cdate_to_dmy_opt (Driver.get_marriage fam) with
+              | Some d ->
+                  let death = infer_death_from_dmy conf d in
+                  if death <> DontKnowIfDead then (death, visited)
+                  else loop_families ~visited (i + 1)
+              | None ->
+                  let death, visited =
+                    let children = Driver.get_children fam in
+                    let len = Array.length children in
+                    let rec loop_children ~visited j =
+                      if j = len then (DontKnowIfDead, visited)
+                      else
+                        let death, visited =
+                          aux ~visited conf base (Driver.poi base children.(j))
+                        in
+                        if death = OfCourseDead then (OfCourseDead, visited)
+                        else loop_children ~visited (j + 1)
+                    in
+                    loop_children ~visited 0
+                  in
+                  if death = OfCourseDead then (OfCourseDead, visited)
+                  else loop_families ~visited (i + 1)
+          in
+          loop_families ~visited 0
+        in
+        let death =
+          if death <> DontKnowIfDead then death
+          else
+            match Driver.get_parents p with
+            | None -> DontKnowIfDead
+            | Some ifam ->
+                infer_death_from_parents conf base (Driver.foi base ifam)
+        in
+        (death, visited)
+  in
+  fst @@ aux ~visited:Driver.Iper.Set.empty conf base p
 
 (*let restrict_to_small_list el =
   let rec begin_list n rl el =
@@ -305,10 +319,10 @@ let print_same_name conf base p =
           in
           Output.print_sstring conf "<tr";
           if is_original then
-            Output.print_sstring conf {| class="font-italic text-info"|};
+            Output.print_sstring conf {| class="fst-italic text-info"|};
           Output.print_sstring conf ">";
           Output.print_sstring conf
-            {|<td class="text-right align-middle text-muted p-0 pr-2" style="width:2em">|};
+            {|<td class="text-end align-middle text-body-secondary p-0 pr-2" style="width:2em">|};
           Output.print_sstring conf (string_of_int (Driver.get_occ p));
           Output.print_sstring conf "</td>";
           (match occu_opt with
@@ -317,10 +331,11 @@ let print_same_name conf base p =
               (match max_len_opt with
               | Some n ->
                   Output.printf conf
-                    {|<td class="text-muted align-middle p-0 pr-1" style="width:%dem">|}
+                    {|<td class="text-body-secondary align-middle p-0 pr-1" style="width:%dem">|}
                     ((n / 2) + 1)
               | None ->
-                  Output.print_sstring conf {|<td class="text-muted p-0 pr-1">|});
+                  Output.print_sstring conf
+                    {|<td class="text-body-secondary p-0 pr-1">|});
               let occu = Driver.sou base (Driver.get_occupation p) in
               (match max_len_opt with
               | Some n when occu <> "" && String.length occu > n ->
@@ -1105,7 +1120,7 @@ let reconstitute_date_dmy2 conf var =
       | Some m -> (
           match get_number var "orday" conf.env with
           | Some d ->
-              let dmy2 = { day2 = d; month2 = m; year2 = y; delta2 = 0 } in
+              let dmy2 = { Adef.day2 = d; month2 = m; year2 = y; delta2 = 0 } in
               if
                 dmy2.day2 >= 1 && dmy2.day2 <= 31 && dmy2.month2 >= 1
                 && dmy2.month2 <= 13
@@ -1114,7 +1129,7 @@ let reconstitute_date_dmy2 conf var =
                 let d = Date.dmy_of_dmy2 dmy2 in
                 bad_date conf d
           | None ->
-              let dmy2 = { day2 = 0; month2 = m; year2 = y; delta2 = 0 } in
+              let dmy2 = { Adef.day2 = 0; month2 = m; year2 = y; delta2 = 0 } in
               if dmy2.month2 >= 1 && dmy2.month2 <= 13 then dmy2
               else
                 let d = Date.dmy_of_dmy2 dmy2 in
@@ -1161,7 +1176,7 @@ let reconstitute_date_dmy conf var =
     | Some y -> (
         let prec =
           match prec with
-          | Some "about" -> About
+          | Some "about" -> Adef.About
           | Some "maybe" -> Maybe
           | Some "before" -> Before
           | Some "after" -> After
@@ -1183,12 +1198,16 @@ let reconstitute_date_dmy conf var =
         | Some m -> (
             match get_number var "dd" conf.env with
             | Some d ->
-                let d = { day = d; month = m; year = y; prec; delta = 0 } in
+                let d =
+                  { Adef.day = d; month = m; year = y; prec; delta = 0 }
+                in
                 if d.day >= 1 && d.day <= 31 && d.month >= 1 && d.month <= 13
                 then Some d
                 else bad_date conf d
             | None ->
-                let d = { day = 0; month = m; year = y; prec; delta = 0 } in
+                let d =
+                  { Adef.day = 0; month = m; year = y; prec; delta = 0 }
+                in
                 if d.month >= 1 && d.month <= 13 then Some d
                 else bad_date conf d)
         | None -> Some { day = 0; month = 0; year = y; prec; delta = 0 })
@@ -1237,7 +1256,7 @@ let check_missing_witnesses_names conf get list =
   loop list
 
 let check_greg_day conf d =
-  if d.day > Date.nb_days_in_month d.month d.year then bad_date conf d
+  if d.Adef.day > Date.nb_days_in_month d.month d.year then bad_date conf d
 
 let reconstitute_date conf var =
   match reconstitute_date_dmy conf var with
@@ -1246,16 +1265,16 @@ let reconstitute_date conf var =
         match p_getenv conf.env (var ^ "_cal") with
         | Some "G" | None ->
             check_greg_day conf d;
-            (d, Dgregorian)
+            (d, Adef.Dgregorian)
         | Some "J" -> (Calendar.gregorian_of_julian d, Djulian)
         | Some "F" -> (Calendar.gregorian_of_french d, Dfrench)
         | Some "H" -> (Calendar.gregorian_of_hebrew d, Dhebrew)
         | _ ->
             check_greg_day conf d;
-            (d, Dgregorian)
+            (d, Adef.Dgregorian)
       in
-      Some (Dgreg (d, cal))
-  | Some d, true -> Some (Dgreg (Calendar.gregorian_of_french d, Dfrench))
+      Some (Adef.Dgreg (d, cal))
+  | Some d, true -> Some (Adef.Dgreg (Calendar.gregorian_of_french d, Dfrench))
   | None, _ -> (
       match p_getenv conf.env (var ^ "_text") with
       | Some _ ->

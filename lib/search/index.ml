@@ -4,6 +4,7 @@ module type S = sig
   type word
   type entry
 
+  val cardinal : t -> int
   val of_seq : (word * entry) Seq.t -> t
   val mem : word -> t -> bool
   val search : word list -> t -> entry Seq.t
@@ -57,6 +58,8 @@ module Make (W : Word.S) (E : Entry) = struct
   module Flatset = Flatset.Make (HE)
 
   type t = Flatset.t Trie.t
+
+  let cardinal = Trie.cardinal
 
   let of_seq =
     let module SE = Set.Make (HE) in
@@ -163,8 +166,7 @@ module Make (W : Word.S) (E : Entry) = struct
 
                 let pattern = p
                 let max_dist = max_dist
-              end)
-          in
+              end) in
           A ((module A), A.init))
         ps
     in

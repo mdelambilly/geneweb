@@ -32,7 +32,7 @@ type union = int Def.gen_union
 type family = (int, int, int) Def.gen_family
 (** Family's entry in the base *)
 
-type couple = int Def.gen_couple
+type couple = int Adef.gen_couple
 (** Family's couple entry in the base *)
 
 type descend = int Def.gen_descend
@@ -73,13 +73,15 @@ type cbase = {
 (** State of the base collecting all information at link time used to create
     further Geneweb database *)
 
+type bnotes = Merge | Erase | First | Drop
+
 type file_info = {
   (* current .gw filename *)
   mutable f_curr_src_file : string; (* current .gwo filename *)
   mutable f_curr_gwo_file : string;
       (* all persons from current file should be separated  *)
   mutable f_separate : bool; (* behavior for base notes from current file *)
-  mutable f_bnotes : [ `merge | `erase | `first | `drop ];
+  mutable f_bnotes : bnotes;
       (* shift all persons from the current file with the given number *)
   mutable f_shift : int;
       (* Table that associates person's names hash and its occurence number
@@ -132,14 +134,18 @@ type gen = {
 }
 (** Global linker state *)
 
+exception Critical_import_error of string
+
 (** Set [gen.g_errored] telling that an error was occured *)
-let check_error gen = gen.g_errored <- true
+let check_error ?(critical = false) gen msg =
+  gen.g_errored <- true;
+  if critical then raise (Critical_import_error msg)
 
 (** Function that will be called if base's checker will find an error *)
 let set_error base gen x =
   Printf.printf "\nError: ";
   Check.print_base_error stdout base x;
-  check_error gen
+  check_error gen ""
 
 (** Function that will be called if base's checker will find a warning *)
 let set_warning base no_warn x =
@@ -482,7 +488,7 @@ let insert_undefined gen key =
         (match occ with 0 -> "" | n -> "." ^ string_of_int n)
         (p_surname gen.g_base x);
       gen.g_def.(ip) <- true;
-      check_error gen);
+      check_error gen "");
   (x, ip)
 
 (** Insert person's definition in the base and modifies all coresponding fields
@@ -555,10 +561,12 @@ let insert_person gen so =
   in
   (* if person wad defined before (not just referenced) *)
   if gen.g_def.(ip) then (
-    (* print error about person beeing already defined *)
-    Printf.printf "\nError: Person already defined: \"%s%s %s\"\n" so.first_name
-      (match x.m_occ with 0 -> "" | n -> "." ^ string_of_int n)
-      so.surname;
+    let person_str =
+      Printf.sprintf "%s%s %s" so.first_name
+        (match x.m_occ with 0 -> "" | n -> "." ^ string_of_int n)
+        so.surname
+    in
+    Printf.printf "\nError: Person already defined: \"%s\"\n" person_str;
     if
       p_first_name gen.g_base x <> so.first_name
       || p_surname gen.g_base x <> so.surname
@@ -568,7 +576,7 @@ let insert_person gen so =
         (match occ with 0 -> "" | n -> "." ^ string_of_int n)
         (p_surname gen.g_base x);
     flush stdout;
-    check_error gen)
+    check_error gen "")
   else (* else set it as defined *)
     gen.g_def.(ip) <- true;
   if not gen.g_errored then
@@ -577,6 +585,14 @@ let insert_person gen so =
       || sou gen.g_base x.m_surname <> so.surname
     then (
       (* print error about person defined with two spellings *)
+      let msg =
+        Printf.sprintf "Two spellings: \"%s%s %s\" vs \"%s%s %s\"" so.first_name
+          (match x.m_occ with 0 -> "" | n -> "." ^ string_of_int n)
+          so.surname
+          (p_first_name gen.g_base x)
+          (match occ with 0 -> "" | n -> "." ^ string_of_int n)
+          (p_surname gen.g_base x)
+      in
       Printf.printf "\nError: Person defined with two spellings:\n";
       Printf.printf "  \"%s%s %s\"\n" so.first_name
         (match x.m_occ with 0 -> "" | n -> "." ^ string_of_int n)
@@ -586,7 +602,7 @@ let insert_person gen so =
         (match occ with 0 -> "" | n -> "." ^ string_of_int n)
         (p_surname gen.g_base x);
       gen.g_def.(ip) <- true;
-      check_error gen);
+      check_error ~critical:true gen msg);
   if not gen.g_errored then (
     let empty_string = unique_string gen "" in
     (* Convert [(_,_,string) gen_person] to [person]. Save all strings in base *)
@@ -673,7 +689,17 @@ let check_parents_not_already_defined gen ix fath moth =
               x.birth := Adef.cdate_None;
               x.death := DontKnowIfDead;
       *)
-      check_error gen
+      let msg =
+        Printf.sprintf
+          "Cannot add \"%s\" as child of \"%s\" and \"%s\" (already child of \
+           \"%s\" and \"%s\")"
+          (designation gen.g_base x)
+          (designation gen.g_base fath)
+          (designation gen.g_base moth)
+          (designation gen.g_base (poi gen.g_base p))
+          (designation gen.g_base (poi gen.g_base m))
+      in
+      check_error ~critical:true gen msg
   | _ -> ()
 
 (** Assign sex to the person's entry if it's unitialised. Print message if sexes
@@ -1028,7 +1054,7 @@ let insert_pevents fname gen sb pevtl =
       (sou gen.g_base p.m_first_name)
       (if p.m_occ = 0 then "" else "." ^ string_of_int p.m_occ)
       (sou gen.g_base p.m_surname);
-    check_error gen)
+    check_error gen "")
   else
     (* sort evenets *)
     let pevents =
@@ -1082,7 +1108,7 @@ let insert_notes fname gen key str =
           key.pk_first_name
           (if occ = 0 then "" else "." ^ string_of_int occ)
           key.pk_surname;
-        check_error gen)
+        check_error gen "")
       else p.m_notes <- unique_string gen str
   | None ->
       Printf.printf "File \"%s\"\n" fname;
@@ -1096,7 +1122,7 @@ let insert_notes fname gen key str =
     content [str] that is treated by the way mentioned in
     [gen.g_file_info.f_bnotes]. *)
 let insert_bnotes fname gen nfname str =
-  if gen.g_file_info.f_bnotes <> `drop then
+  if gen.g_file_info.f_bnotes <> Drop then
     let old_nread = gen.g_base.c_bnotes.nread in
     (* Convert path notation from 'dir1:dir2:file' to 'dir1/dir2/file'
        (if a valid path) *)
@@ -1110,11 +1136,10 @@ let insert_bnotes fname gen nfname str =
     let bnotes =
       let str =
         match gen.g_file_info.f_bnotes with
-        | `drop -> assert false
-        | `erase -> str
-        | `merge -> old_nread nfname RnAll ^ str
-        | `first -> (
-            match old_nread nfname RnAll with "" -> str | str -> str)
+        | Drop -> assert false
+        | Erase -> str
+        | Merge -> old_nread nfname RnAll ^ str
+        | First -> ( match old_nread nfname RnAll with "" -> str | str -> str)
       in
       {
         nread = (fun f n -> if f = nfname then str else old_nread f n);
@@ -1166,7 +1191,7 @@ let insert_relations fname gen sb sex rl =
         (sou gen.g_base p.m_first_name)
         (if p.m_occ = 0 then "" else "." ^ string_of_int p.m_occ)
         (sou gen.g_base p.m_surname);
-      check_error gen)
+      check_error gen "")
   else (
     notice_sex gen p sex;
     let rl = List.map (insert_relation gen ip) rl in
@@ -1650,7 +1675,7 @@ let link ?(no_warn = false) next_family_fun bdir =
       f_curr_gwo_file = "";
       f_separate = false;
       f_shift = 0;
-      f_bnotes = `merge;
+      f_bnotes = Merge;
     }
   in
   let gen =
@@ -1704,12 +1729,15 @@ let link ?(no_warn = false) next_family_fun bdir =
     Check.check_base base (set_error base gen) (set_warning base no_warn) ignore;
     if !pr_stats then Stats.(print_stats base @@ stat_base base));
   if not gen.g_errored then (
-    if !do_consang then ignore @@ ConsangAll.compute base true;
-    Driver.sync base;
+    if !do_consang then (
+      ignore @@ ConsangAll.compute base true;
+      Driver.sync base);
     output_wizard_notes bdir gen.g_wiznotes;
     output_command_line bdir;
     Mutil.rm_rf tmp_dir;
     true)
   else (
-    Mutil.rm_rf bdir;
+    Mutil.rm_rf tmp_dir;
+    Printf.eprintf "*** database NOT created due to errors\n";
+    flush stderr;
     false)

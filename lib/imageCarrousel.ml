@@ -6,6 +6,8 @@ let src = Logs.Src.create ~doc:"ImageCarrousel" __MODULE__
 
 module Log = (val Logs.src_log src : Logs.LOG)
 module Driver = Geneweb_db.Driver
+module Server = Geneweb_http.Server
+module Code = Geneweb_http.Code
 
 let cp = Filesystem.copy_file ~perm:0o666
 
@@ -287,33 +289,35 @@ let print_send_image conf base mode p =
   in
   Hutil.header conf title;
   Output.printf conf
-    "<form method=\"post\" action=\"%s\" enctype=\"multipart/form-data\">\n"
+    {|<form method="post" action="%s" enctype="multipart/form-data">|}
     conf.command;
   Output.print_sstring conf
-    "<div class=\"d-inline-flex align-items-center mt-2\">\n";
+    {|<div class="d-flex align-items-center gap-2 mt-2 flex-wrap">|};
   Util.hidden_env conf;
   Util.hidden_input conf "m" (Adef.encoded "SND_IMAGE_C_OK");
   Util.hidden_input conf "i"
     (Driver.get_iper p |> Driver.Iper.to_string |> Mutil.encode);
   Util.hidden_input conf "mode" (Adef.encoded mode);
-  Output.print_sstring conf (Utf8.capitalize_fst (transl conf "file"));
-  Output.print_sstring conf (Util.transl conf ":");
-  Output.print_sstring conf " ";
+  Output.print_sstring conf {|<label for="file" class="visually-hidden">|};
   Output.print_sstring conf
-    {|<input type="file" class="form-control-file ml-1" name="file" accept="image/*">|};
+    (Utf8.capitalize_fst (transl conf "choose an image"));
+  Output.print_sstring conf (Util.transl conf ":");
+  Output.print_sstring conf {|</label>|};
+  Output.print_sstring conf
+    {|<input type="file" class="form-control w-50" id="file" name="file" accept="image/*">|};
+  Output.print_sstring conf {|<button type="submit" class="btn btn-primary">|};
+  transl_nth conf "validate/delete" 0
+  |> Utf8.capitalize_fst |> Output.print_sstring conf;
+  Output.print_sstring conf {|</button></div>|};
   (match
      Option.map int_of_string @@ List.assoc_opt "max_images_size" conf.base_env
    with
   | Some len ->
-      Output.print_sstring conf "<p>(maximum authorized size = ";
-      Output.print_sstring conf (string_of_int len);
-      Output.print_sstring conf " bytes)</p>"
+      Output.printf conf
+        {|<p class="text-body-secondary small mt-1">(maximum authorized size = %d bytes)</p>|}
+        len
   | None -> ());
-  Output.print_sstring conf
-    {|<span>></span><button type="submit" class="btn btn-primary ml-3">|};
-  transl_nth conf "validate/delete" 0
-  |> Utf8.capitalize_fst |> Output.print_sstring conf;
-  Output.print_sstring conf "</button></div></form>";
+  Output.print_sstring conf {|</form>|};
   print_link_delete_image conf base p;
   Hutil.trailer conf
 
@@ -333,7 +337,7 @@ let effective_send_ok conf base p file =
     try (List.assoc "mode" conf.env :> string) with Not_found -> "portraits"
   in
   let strm = Stream.of_string file in
-  let request, content = Wserver.get_request_and_content strm in
+  let request, content = Server.get_request_and_content strm in
   let content =
     let s =
       let rec loop len (strm__ : _ Stream.t) =
@@ -423,7 +427,7 @@ let effective_send_c_ok conf base p file file_name =
     | None -> Adef.safe ""
   in
   let strm = Stream.of_string file in
-  let request, content = Wserver.get_request_and_content strm in
+  let request, content = Server.get_request_and_content strm in
   let content =
     if mode = "note" || mode = "source" || image_url <> "" then ""
     else
@@ -932,7 +936,7 @@ let print_main_c conf base =
                       "" !url_params
                   in
                   let redirect_url = base_url ^ params_string in
-                  Output.status conf Def.Moved_Temporarily;
+                  Output.status conf Code.Moved_Temporarily;
                   Output.header conf "Location: %s" redirect_url;
                   Output.flush conf)
           | None -> Hutil.incorrect_request conf ~comment:"missing person index"
@@ -955,7 +959,7 @@ let print conf base =
       let fn = Driver.p_first_name base p in
       let sn = Driver.p_surname base p in
       if fn = "?" || sn = "?" then Hutil.incorrect_request conf
-      else print_send_image conf base "portraist" p
+      else print_send_image conf base "portraits" p
 
 let print_family conf base =
   match p_getenv conf.env "i" with

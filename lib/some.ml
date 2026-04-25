@@ -6,6 +6,7 @@ open Util
 module StrSet = Mutil.StrSet
 module Driver = Geneweb_db.Driver
 module Gutil = Geneweb_db.Gutil
+module Iper = Driver.Iper
 
 module AliasCache = struct
   let cache = Hashtbl.create 1000
@@ -15,7 +16,163 @@ module AliasCache = struct
   let get_alias iper = try Hashtbl.find cache iper with Not_found -> None
 end
 
-module IperSet = Driver.Iper.Set
+let get_extra_surnames conf =
+  let rec loop i acc =
+    match p_getenv conf.env ("v" ^ string_of_int i) with
+    | Some s when s <> "" -> loop (i + 1) (s :: acc)
+    | _ -> List.rev acc
+  in
+  loop 1 []
+
+let extra_surname_url_params conf =
+  let rec loop i buf =
+    match p_getenv conf.env ("v" ^ string_of_int i) with
+    | Some s when s <> "" ->
+        Buffer.add_string buf "&v";
+        Buffer.add_string buf (string_of_int i);
+        Buffer.add_char buf '=';
+        Buffer.add_string buf (Mutil.encode s :> string);
+        loop (i + 1) buf
+    | _ -> Buffer.contents buf
+  in
+  loop 1 (Buffer.create 64)
+
+(* TODO: generic functions, expose in perso.ml? *)
+let url_excluding conf exclude_keys =
+  let l =
+    List.fold_left
+      (fun acc (k, _) -> List.remove_assoc k acc)
+      conf.env (conf.henv @ conf.senv)
+  in
+  let suffix =
+    List.filter_map
+      (fun (k, v) ->
+        if k = "" || List.mem k exclude_keys then None
+        else Some (k ^ "=" ^ Adef.as_string v))
+      l
+    |> String.concat "&"
+  in
+  (commd conf :> string) ^ suffix
+
+let url_removing_extra conf remove_index =
+  let extras = get_extra_surnames conf in
+  (* List.filteri requires OCaml >= 4.12 *)
+  let remaining =
+    extras
+    |> List.mapi (fun i x -> (i, x))
+    |> List.filter (fun (i, _) -> i <> remove_index)
+    |> List.map snd
+  in
+  let all_vi_keys =
+    List.init (List.length extras) (fun i -> "v" ^ string_of_int (i + 1))
+  in
+  let base_url = url_excluding conf all_vi_keys in
+  let buf = Buffer.create 128 in
+  Buffer.add_string buf base_url;
+  List.iteri
+    (fun i sn ->
+      Buffer.add_string buf "&v";
+      Buffer.add_string buf (string_of_int (i + 1));
+      Buffer.add_char buf '=';
+      Buffer.add_string buf (Mutil.encode sn :> string))
+    remaining;
+  Buffer.contents buf
+
+let print_variant_controls conf suggestions =
+  let extra = get_extra_surnames conf in
+  Output.print_sstring conf
+    {|<input type="text" list="sn-var-dl" id="sn-var-in"
+  class="form-control form-control-sm ms-3" style="width:10em"
+  autocomplete="off">
+<button type="button" id="sn-var-btn"
+  class="btn btn-outline-secondary btn-sm mx-0"
+  title="Add surname variant">
+<i class="fa fa-plus"></i></button><div class="col flex-wrap px-1">|};
+  List.iteri
+    (fun i sn ->
+      Output.printf conf
+        {|<a href="%s"
+ class="badge text-bg-primary me-1 mb-1"
+>%s <i class="fa fa-xmark ms-1"></i></a>|}
+        (url_removing_extra conf i)
+        (Util.escape_html sn :> string))
+    extra;
+  (* datalist *)
+  Output.print_sstring conf {|<datalist id="sn-var-dl">|};
+  List.iter
+    (fun sn ->
+      Output.printf conf {|<option value="%s">|} (Util.escape_html sn :> string))
+    suggestions;
+  Output.print_sstring conf
+    {|</datalist></div>
+<script>
+(function(){
+ var b=document.getElementById("sn-var-btn"),
+     i=document.getElementById("sn-var-in");
+ if(!b||!i)return;
+ function go(){
+  var v=i.value.trim();if(!v)return;
+  var u=new URL(location.href),vl=v.toLowerCase();
+  if(u.searchParams.get("v")&&
+     u.searchParams.get("v").toLowerCase()===vl)
+    {i.value="";return;}
+  var n=1;
+  while(u.searchParams.has("v"+n)){
+   if(u.searchParams.get("v"+n).toLowerCase()===vl)
+     {i.value="";return;}
+   n++;}
+  u.searchParams.set("v"+n,v);
+  location.href=u.toString();}
+ b.addEventListener("click",go);
+ i.addEventListener("keydown",function(e){
+  if(e.key==="Enter"){e.preventDefault();go();}});
+})();
+</script>|}
+
+let print_nav_variant_bar conf suggestions ~current_mode ~name ?branch_count ()
+    =
+  let display_by =
+    Utf8.capitalize_fst (transl_nth conf "display by/branch/alphabetic order" 0)
+  in
+  let branch_l = transl_nth conf "display by/branch/alphabetic order" 1 in
+  let alpha_l = transl_nth conf "display by/branch/alphabetic order" 2 in
+  let branch_url =
+    Util.url_set_aux conf
+      (Util.commd conf :> string)
+      [ "m"; "pn"; "p"; "n"; "o"; "v" ]
+      [ "N"; ""; ""; ""; ""; name ]
+  in
+  let alpha_url =
+    Util.url_set_aux conf
+      (Util.commd conf :> string)
+      [ "m"; "pn"; "p"; "n"; "o"; "v" ]
+      [ "N"; ""; ""; ""; "i"; name ]
+  in
+  Output.printf conf
+    {|<div class="d-flex align-items-center flex-wrap mb-3">
+<div>%s|}
+    display_by;
+  (match current_mode with
+  | `Branch ->
+      Output.printf conf {|<i class="fa fa-code-fork ms-3 me-1"></i>%s|}
+        branch_l;
+      (match branch_count with
+      | Some n -> Output.printf conf " (%d)" n
+      | None -> ());
+      Output.printf conf
+        {|<i class="fa fa-arrow-down-a-z ms-3 me-1"></i>\
+<a href="%s" rel="nofollow">%s</a>|}
+        alpha_url alpha_l
+  | `Alphabetic ->
+      Output.printf conf
+        {|<i class="fa fa-code-fork ms-3 me-1"></i>\
+<a href="%s" rel="nofollow">%s</a>|}
+        branch_url branch_l;
+      Output.printf conf {|<i class="fa fa-arrow-down-a-z ms-3 me-1"></i>%s|}
+        alpha_l);
+  Output.print_sstring conf {|</div>|};
+  print_variant_controls conf suggestions;
+  Output.print_sstring conf {|</div>|}
 
 let name_unaccent s =
   let rec copy i len =
@@ -41,53 +198,6 @@ let _first_name_not_found conf =
   not_found conf (transl conf "first name not found")
 
 let surname_not_found conf = not_found conf (transl conf "surname not found")
-
-let print_display_mode_navigation conf ~current_mode ~name ?branch_count () =
-  let branch_label = transl_nth conf "display by/branch/alphabetic order" 1 in
-  let alpha_label = transl_nth conf "display by/branch/alphabetic order" 2 in
-  let print_mode_item ~icon ~label ~url_opt ~count_opt =
-    Output.printf conf {|<i class="fa %s ml-3 mr-1"></i>|} icon;
-    match url_opt with
-    | Some opt -> (
-        let url =
-          Util.url_set_aux conf
-            (Util.commd conf :> string)
-            [ "m"; "pn"; "p"; "n"; "o"; "v" ]
-            [ "N"; ""; ""; ""; opt; name ]
-        in
-        Output.printf conf {|<a href="%s" rel="nofollow">%s</a>|} url label;
-        match count_opt with
-        | Some n -> Output.printf conf " (%d)" n
-        | None -> ())
-    | None -> (
-        Output.print_sstring conf label;
-        match count_opt with
-        | Some n -> Output.printf conf " (%d)" n
-        | None -> ())
-  in
-  Output.print_sstring conf "<div class=\"mb-3\">";
-  Output.print_sstring conf
-    (Utf8.capitalize_fst
-       (transl_nth conf "display by/branch/alphabetic order" 0));
-  (match current_mode with
-  | `Branch ->
-      print_mode_item ~icon:"fa-code-fork" ~label:branch_label ~url_opt:None
-        ~count_opt:branch_count;
-      print_mode_item ~icon:"fa-arrow-down-a-z" ~label:alpha_label
-        ~url_opt:(Some "i") ~count_opt:None
-  | `Alphabetic ->
-      print_mode_item ~icon:"fa-code-fork" ~label:branch_label
-        ~url_opt:(Some "") ~count_opt:None;
-      print_mode_item ~icon:"fa-arrow-down-a-z" ~label:alpha_label ~url_opt:None
-        ~count_opt:None);
-  Output.print_sstring conf "</div>"
-
-let print_branch_to_alphabetic conf x nb_branch =
-  print_display_mode_navigation conf ~current_mode:`Branch ~name:x
-    ~branch_count:nb_branch ()
-
-let print_alphabetic_to_branch conf x =
-  print_display_mode_navigation conf ~current_mode:`Alphabetic ~name:x ()
 
 let persons_of_fsname conf base base_strings_of_fsname find proj x =
   let istrl = base_strings_of_fsname base x in
@@ -256,7 +366,7 @@ let print_firstname_variants conf ?(filter = true) variants_set =
       else variants_set
     in
     if not (StrSet.is_empty filtered_variants) then (
-      Output.print_sstring conf {|<div class="font-weight-bold mb-3">|};
+      Output.print_sstring conf {|<div class="fw-bold mb-3">|};
       let title = Utf8.capitalize_fst (transl conf "search exact") in
       Mutil.list_iter_first
         (fun first fn ->
@@ -300,7 +410,8 @@ let first_name_print_list_multi conf base x1 sections_groups =
     let cnt =
       if not is_active then ""
       else
-        Printf.sprintf {|<span class="badge badge-light ml-2">%d</span>|} count
+        Printf.sprintf {|<span class="badge text-bg-light ms-2">%d</span>|}
+          count
     in
     let tt = if is_active then "delete" else "add" in
     let title = Utf8.capitalize_fst (transl conf tt) in
@@ -315,7 +426,7 @@ let first_name_print_list_multi conf base x1 sections_groups =
           anchor
     in
     Printf.sprintf
-      {|<div class="btn-group btn-group-sm mr-2" role="group">
+      {|<div class="btn-group btn-group-sm me-2" role="group">
           %s
           <a href="%s" class="btn btn-%s" title="%s">%s%s</a>
         </div>|}
@@ -341,12 +452,12 @@ let first_name_print_list_multi conf base x1 sections_groups =
     let badge1 =
       if not is_active then " / "
       else
-        Printf.sprintf {|<span class="badge badge-light mx-2">%d</span>|} cnt1
+        Printf.sprintf {|<span class="badge text-bg-light mx-2">%d</span>|} cnt1
     in
     let badge2 =
       if not is_active then ""
       else
-        Printf.sprintf {|<span class="badge badge-light ml-2">%d</span>|} cnt2
+        Printf.sprintf {|<span class="badge text-bg-light ms-2">%d</span>|} cnt2
     in
     let btn_cls = if is_active then "primary" else "outline-primary" in
     Printf.sprintf
@@ -417,7 +528,7 @@ let first_name_print_list_multi conf base x1 sections_groups =
     in
     Output.printf conf
       {|<a href="%s" class="btn btn-primary btn-sm">
-          <i class="fa fa-search-plus mr-1"></i>%s
+          <i class="fa fa-search-plus me-1"></i>%s
         </a>|}
       url
       (Utf8.capitalize_fst (transl conf "searching all"))
@@ -541,14 +652,14 @@ let persons_of_absolute_surname =
   persons_of_absolute Driver.base_strings_of_surname Driver.persons_of_surname
     Driver.get_surname
 
-let has_children_with_that_name conf base des name =
-  let compare_name n1 n2 =
-    if p_getenv conf.env "t" = Some "A" then n1 = n2
-    else Name.lower n1 = Name.lower n2
-  in
-  List.exists
-    (fun ip -> compare_name (Driver.p_surname base (pget conf base ip)) name)
-    (Array.to_list (Driver.get_children des))
+let has_children_with_that_name conf base des names =
+  let absolute = p_getenv conf.env "t" = Some "A" in
+  let norm = if absolute then Fun.id else Name.lower in
+  let module S = Set.Make (String) in
+  let targets = S.of_list (List.map norm names) in
+  Array.exists
+    (fun ip -> S.mem (norm (Driver.p_surname base (pget conf base ip))) targets)
+    (Driver.get_children des)
 
 (* List selection bullets *)
 
@@ -594,7 +705,10 @@ let alphabetic1 n1 n2 = Gutil.alphabetic_utf_8 n1 n2
 
 type 'a branch_head = { bh_ancestor : 'a; bh_well_named_ancestors : 'a list }
 
-let print_branch conf base psn name =
+let print_branch conf base psn ~primary names =
+  let module S = Set.Make (String) in
+  let names_set = S.of_list (List.map Name.lower names) in
+  let primary_set = S.of_list (List.map Name.lower primary) in
   let unsel_list = unselected_bullets conf in
   let rec loop p =
     let u = pget conf base (Driver.get_iper p) in
@@ -604,10 +718,14 @@ let print_branch conf base psn name =
           let fam = Driver.foi base ifam in
           let c = Gutil.spouse (Driver.get_iper p) fam in
           let c = pget conf base c in
-          let down = has_children_with_that_name conf base fam name in
+          (* C1: names list instead of single name *)
+          let down = has_children_with_that_name conf base fam names in
+          (* C2: names membership instead of = name *)
           let down =
-            if Driver.get_sex p = Female && Driver.p_surname base c = name then
-              false
+            if
+              Driver.get_sex p = Female
+              && S.mem (Name.lower (Driver.p_surname base c)) names_set
+            then false
             else down
           in
           let i = ifam in
@@ -637,8 +755,10 @@ let print_branch conf base psn name =
       Output.print_string conf
         (render p
            (if is_hide_names conf p && not (authorized_age conf base p) then
-              Adef.safe "x"
-            else if (not psn) && (not with_sn) && Driver.p_surname base p = name
+              Adef.safe "x" (* C3: names membership instead of = name *)
+            else if
+              (not psn) && (not with_sn)
+              && S.mem (Name.lower (Driver.p_surname base p)) primary_set
             then gen_person_text ~sn:false conf base p
             else gen_person_text conf base p));
       Output.print_sstring conf close_tag;
@@ -648,7 +768,8 @@ let print_branch conf base psn name =
     Output.print_sstring conf "<li>";
     print_selection_bullet conf first_select;
     print_elem p true true false;
-    if Array.length (Driver.get_family u) <> 0 then
+    let has_family = Array.length (Driver.get_family u) <> 0 in
+    if has_family then
       ignore
       @@ Array.fold_left
            (fun first (fam, sp, select) ->
@@ -665,11 +786,7 @@ let print_branch conf base psn name =
              (match select with
              | Some (_, true) ->
                  Output.print_sstring conf "<ul>";
-                 Array.iter
-                   (fun e ->
-                     loop (pget conf base e);
-                     Output.print_sstring conf "</li>")
-                   children;
+                 Array.iter (fun e -> loop (pget conf base e)) children;
                  Output.print_sstring conf "</ul>"
              | Some (_, false) -> ()
              | None ->
@@ -678,17 +795,16 @@ let print_branch conf base psn name =
                      {|<ul class="posterity"><li>...</li></ul>|});
              Output.print_sstring conf "</li>";
              false)
-           true family_list;
-    Output.print_sstring conf "</li>"
+           true family_list
+    else Output.print_sstring conf "</li>"
   in
   loop
 
-let print_one_branch conf base bh psn =
+let print_one_branch conf base bh psn ~primary names =
   Output.print_sstring conf "<ul>";
   let p = bh.bh_ancestor in
   if bh.bh_well_named_ancestors = [] then
-    let x = Driver.sou base (Driver.get_surname p) in
-    print_branch conf base psn x p
+    print_branch conf base psn ~primary names p
   else (
     Output.print_sstring conf "<li>";
     if is_hidden p then Output.print_sstring conf "&lt;&lt;"
@@ -696,14 +812,61 @@ let print_one_branch conf base bh psn =
       wprint_geneweb_link conf (Util.acces conf base p) (Adef.safe "&lt;&lt;");
     Output.print_sstring conf "<ul>";
     List.iter
-      (fun p ->
-        let x = Driver.sou base (Driver.get_surname p) in
-        print_branch conf base psn x p)
+      (fun p -> print_branch conf base psn ~primary names p)
       bh.bh_well_named_ancestors;
     Output.print_sstring conf "</ul></li>");
   Output.print_sstring conf "</ul>"
 
-let print_one_surname_by_branch conf base x xl (bhl, str) =
+let collect_surname_suggestions conf base iperl known =
+  let norm = Name.lower in
+  let known_set =
+    List.fold_left (fun acc s -> StrSet.add (norm s) acc) StrSet.empty known
+  in
+  let suggestions = Hashtbl.create 64 in
+  let try_add sn =
+    let k = norm sn in
+    if
+      sn <> "?" && k <> ""
+      && (not (StrSet.mem k known_set))
+      && not (Hashtbl.mem suggestions k)
+    then Hashtbl.replace suggestions k sn
+  in
+  List.iter
+    (fun ip ->
+      let p = pget conf base ip in
+      if (not (is_hide_names conf p)) || authorized_age conf base p then begin
+        List.iter
+          (fun istr -> try_add (Driver.sou base istr))
+          (Driver.get_surnames_aliases p);
+        Array.iter
+          (fun ifam ->
+            Array.iter
+              (fun cip -> try_add (Driver.p_surname base (pget conf base cip)))
+              (Driver.get_children (Driver.foi base ifam)))
+          (Driver.get_family p)
+      end)
+    iperl;
+  let raw = Hashtbl.fold (fun _ v acc -> v :: acc) suggestions [] in
+  let first_lower s =
+    if s = "" then ""
+    else
+      let len = Utf8.next s 0 in
+      Name.lower (String.sub s 0 len)
+  in
+  let initials =
+    List.filter_map
+      (fun s ->
+        let fl = first_lower s in
+        if fl = "" then None else Some fl)
+      known
+    |> List.sort_uniq String.compare
+  in
+  let starts_like s = List.mem (first_lower s) initials in
+  let pri, rest = List.partition starts_like raw in
+  List.sort Gutil.alphabetic_order pri @ List.sort Gutil.alphabetic_order rest
+
+let print_one_surname_by_branch conf base x xl ~extra_names ~suggestions
+    (bhl, str) =
   let ancestors =
     match p_getenv conf.env "order" with
     | Some "d" ->
@@ -716,13 +879,13 @@ let print_one_surname_by_branch conf base x xl (bhl, str) =
           | _, None -> -1
           | None, _ -> 1
         in
-        List.sort (fun p1 p2 -> born_before p1.bh_ancestor p2.bh_ancestor) bhl
+        List.sort (fun a b -> born_before a.bh_ancestor b.bh_ancestor) bhl
     | _ ->
         List.sort
-          (fun p1 p2 ->
+          (fun a b ->
             alphabetic1
-              (Driver.p_first_name base p1.bh_ancestor)
-              (Driver.p_first_name base p2.bh_ancestor))
+              (Driver.p_first_name base a.bh_ancestor)
+              (Driver.p_first_name base b.bh_ancestor))
           bhl
   in
   let len = List.length ancestors in
@@ -733,54 +896,68 @@ let print_one_surname_by_branch conf base x xl (bhl, str) =
         try List.assoc "always_surname" conf.base_env = "yes"
         with Not_found -> false)
   in
-  let title h =
-    if h || p_getenv conf.env "t" = Some "A" then
-      Output.print_string conf (escape_html x)
-    else
-      Mutil.list_iter_first
-        (fun first x ->
-          if not first then Output.print_sstring conf ", ";
-          Output.print_sstring conf {|<a href="|};
-          Output.print_string conf (commd conf);
-          Output.print_sstring conf {|m=N&t=A&v=|};
-          Output.print_string conf (Mutil.encode x);
-          Output.print_sstring conf {|">|};
-          Output.print_string conf (escape_html x);
-          Output.print_sstring conf {|</a>|})
-        (StrSet.elements xl)
-  in
+  let extra = get_extra_surnames conf in
+  let primary = StrSet.elements xl in
+  let names = List.sort_uniq String.compare (primary @ extra_names) in
+  let extra_params = extra_surname_url_params conf in
   let br = p_getint conf.env "br" in
+  let title h =
+    let esc s = (escape_html s :> string) in
+    let link s =
+      Output.printf conf {|<a href="%sm=N&t=A&v=%s">%s</a>|}
+        (commd conf :> string)
+        (Mutil.encode s :> string)
+        (esc s)
+    in
+    let primaries = if primary = [] then [ x ] else primary in
+    let render =
+      if h || p_getenv conf.env "t" = Some "A" then fun s ->
+        Output.print_sstring conf (esc s)
+      else fun s -> link s
+    in
+    let print_list l =
+      Mutil.list_iter_first
+        (fun first s ->
+          if not first then Output.print_sstring conf ", ";
+          render s)
+        l
+    in
+    print_list primaries;
+    if extra <> [] then begin
+      Output.print_sstring conf " | ";
+      print_list extra
+    end
+  in
   Hutil.header conf title;
-  (* Si on est dans un calcul de parenté, on affiche *)
-  (* l'aide sur la sélection d'un individu.          *)
   Util.print_tips_relationship conf;
-  (* Menu afficher par branche/ordre alphabetique *)
-  if br = None then print_branch_to_alphabetic conf x len;
+  print_nav_variant_bar conf suggestions ~current_mode:`Branch ~name:x
+    ~branch_count:len ();
+
+  (* -- Branch listing -- *)
   Output.print_sstring conf {|<div id="surname_by_branch">|};
-  if len > 1 && br = None then (
+  if len > 1 && br = None then begin
     Output.print_sstring conf "<dl>";
     ignore
     @@ List.fold_left
          (fun n bh ->
-           Output.print_sstring conf {|<dt><a href="|};
-           Output.print_string conf (commd conf);
-           Output.print_sstring conf {|m=N&v=|};
-           Output.print_string conf (Mutil.encode str);
-           Output.print_sstring conf {|&br=|};
-           Output.print_sstring conf (string_of_int n);
-           Output.print_sstring conf {|" rel="nofollow">|};
-           Output.print_sstring conf (string_of_int n);
-           Output.print_sstring conf ".</a></dt><dd>";
-           print_one_branch conf base bh psn;
+           Output.printf conf
+             {|<dt><a href="%sm=N&v=%s%s&br=%d"
+ rel="nofollow">%d.</a></dt><dd>|}
+             (commd conf :> string)
+             (Mutil.encode str :> string)
+             extra_params n n;
+           print_one_branch conf base bh psn ~primary names;
            Output.print_sstring conf "</dd>";
            n + 1)
          1 ancestors;
-    Output.print_sstring conf "</dl>")
+    Output.print_sstring conf "</dl>"
+  end
   else
     ignore
     @@ List.fold_left
          (fun n bh ->
-           if br = None || br = Some n then print_one_branch conf base bh psn;
+           if br = None || br = Some n then
+             print_one_branch conf base bh psn ~primary names;
            n + 1)
          1 ancestors;
   Output.print_sstring conf "</div>";
@@ -808,7 +985,7 @@ let print_alphabetic_index conf list extract_name count_persons threshold =
   in
 
   if List.length letter_groups > threshold then (
-    Output.printf conf {|<div class="mb-2 ml-3">|};
+    Output.printf conf {|<div class="mb-2 ms-3">|};
     List.iter
       (fun (letter, entries) ->
         let total_entries = List.length entries in
@@ -816,7 +993,7 @@ let print_alphabetic_index conf list extract_name count_persons threshold =
           List.fold_left (fun acc item -> acc + count_persons item) 0 entries
         in
         Output.printf conf
-          {|<a href="#%s" class="btn btn-outline-secondary btn-sm mr-1 mb-1" title="%d %s, %d %s">%s</a>|}
+          {|<a href="#%s" class="btn btn-outline-secondary btn-sm me-1 mb-1" title="%d %s, %d %s">%s</a>|}
           letter total_entries
           (transl_nth conf "surname/surnames"
              (if total_entries = 1 then 0 else 1))
@@ -915,7 +1092,7 @@ let print_several_possible_surnames x conf base (_, surname_groups) =
   let order (ord, _, _, _, _) = ord in
   let wprint_elem (_, txt, sn, count, is_alias) =
     if is_alias then
-      Output.printf conf "<em class='text-muted'>%s</em> [%d]"
+      Output.printf conf "<em class='text-body-secondary'>%s</em> [%d]"
         (escape_html txt :> string)
         count
     else
@@ -935,8 +1112,8 @@ let print_several_possible_surnames x conf base (_, surname_groups) =
         <strong>%s</strong><br>
         <small>%s</small>
       </div>
-      <a href="%sm=SN&n=%s" class="btn btn-info btn-sm ml-3">
-        <i class="fa fa-list-ul mr-1"></i>%s
+      <a href="%sm=SN&n=%s" class="btn btn-info btn-sm ms-3">
+        <i class="fa fa-list-ul me-1"></i>%s
       </a>
     </div>
   </div>|}
@@ -947,7 +1124,7 @@ let print_several_possible_surnames x conf base (_, surname_groups) =
     (Utf8.capitalize_fst (transl_nth conf "surname details" 1) :> string);
   Hutil.trailer conf
 
-let print_family_alphabetic x conf base liste =
+let print_family_alphabetic ?(extra_names = []) ~suggestions x conf base liste =
   let homonymes =
     let list =
       List.fold_left
@@ -964,6 +1141,9 @@ let print_family_alphabetic x conf base liste =
     in
     List.sort compare (StrSet.elements set)
   in
+  let extra = get_extra_surnames conf in
+  let extra_lower = List.map Name.lower extra_names in
+  (* FIX 7a: grouping key includes surname for extras *)
   let liste =
     let l =
       List.sort
@@ -980,36 +1160,49 @@ let print_family_alphabetic x conf base liste =
     List.fold_left
       (fun l x ->
         let px = Driver.p_first_name base x in
+        let sn = Driver.p_surname base x in
+        let key =
+          if extra_lower <> [] && List.mem (Name.lower sn) extra_lower then
+            px ^ " " ^ sn
+          else px
+        in
         match l with
-        | (p, l1) :: l when alphabetic1 px p = 0 -> (p, x :: l1) :: l
-        | _ -> (px, [ x ]) :: l)
+        | (p, l1) :: l when alphabetic1 key p = 0 -> (p, x :: l1) :: l
+        | _ -> (key, [ x ]) :: l)
       [] l
   in
   match liste with
   | [] -> surname_not_found conf x
   | _ ->
+      (* FIX 7b: title "primary | extra1, extra2" *)
       let title h =
-        let access x =
+        let access s =
           if h || List.length homonymes = 1 then
-            (Util.escape_html x :> Adef.safe_string)
+            (Util.escape_html s :> Adef.safe_string)
           else
             geneweb_link conf
-              ("m=N&o=i&v=" ^<^ Mutil.encode x ^>^ "&t=A"
+              ("m=N&o=i&v=" ^<^ Mutil.encode s ^>^ "&t=A"
                 :> Adef.escaped_string)
-              (escape_html x :> Adef.safe_string)
+              (escape_html s :> Adef.safe_string)
         in
         Mutil.list_iter_first
-          (fun first x ->
+          (fun first s ->
             if not first then Output.print_sstring conf ", ";
-            Output.print_string conf (access x))
-          homonymes
+            Output.print_string conf (access s))
+          homonymes;
+        if extra <> [] then begin
+          Output.print_sstring conf " | ";
+          Mutil.list_iter_first
+            (fun first sn ->
+              if not first then Output.print_sstring conf ", ";
+              Output.print_string conf (access sn))
+            extra
+        end
       in
       Hutil.header conf title;
-      (* Si on est dans un calcul de parenté, on affiche *)
-      (* l'aide sur la sélection d'un individu.          *)
       Util.print_tips_relationship conf;
-      (* Menu afficher par branche/ordre alphabetique *)
-      print_alphabetic_to_branch conf x;
+      print_nav_variant_bar conf suggestions ~current_mode:`Alphabetic ~name:x
+        ();
       print_alphab_list conf
         (fun (p, _) -> first_char p)
         (print_elem conf base false)
@@ -1028,8 +1221,10 @@ let insert_at_position_in_family children ip ipl =
   in
   loop (Array.to_list children) ipl
 
-let select_ancestors conf base name_inj ipl =
-  let str_inj s = name_inj (Driver.sou base s) in
+let select_ancestors conf base names_lower ipl =
+  let is_known p =
+    List.mem (Name.lower (Driver.sou base (Driver.get_surname p))) names_lower
+  in
   List.fold_left
     (fun bhl ip ->
       let p = pget conf base ip in
@@ -1040,11 +1235,7 @@ let select_ancestors conf base name_inj ipl =
           let imoth = Driver.get_mother fam in
           let fath = pget conf base ifath in
           let moth = pget conf base imoth in
-          let s = str_inj (Driver.get_surname p) in
-          if
-            str_inj (Driver.get_surname fath) <> s
-            && str_inj (Driver.get_surname moth) <> s
-          then
+          if (not (is_known fath)) && not (is_known moth) then
             let rec loop = function
               | bh :: bhl ->
                   if bh.bh_ancestor = ifath || bh.bh_ancestor = imoth then
@@ -1096,31 +1287,87 @@ let search_surname_list conf base x =
             (str, len + len1) :: List.remove_assoc str strl
           with Not_found -> (str, len) :: strl
         in
-        (List.fold_right IperSet.add iperl1 iperl, strl))
-      list (IperSet.empty, [])
+        (List.fold_right Iper.Set.add iperl1 iperl, strl))
+      list (Iper.Set.empty, [])
   in
-  (list, IperSet.elements iperl, name_inj)
+  (list, Iper.Set.elements iperl, name_inj)
 
 let search_surname_print conf base _not_found_fun x =
-  let list, iperl, _name_inj = search_surname_list conf base x in
-  (* Construction de la table des sosa de la base *)
+  let extra = get_extra_surnames conf in
+  let list0, iperl0, _name_inj = search_surname_list conf base x in
+  (* For alternates given via v1, v2, ..., match strictly: accept only
+     strip_lower equality with the query, suppressing the crush_lower
+     phonetic fallback of [persons_of_fsname]. Unlike the primary query
+     [x], these variants are explicit user selections (typically picked
+     from suggestions) and must not bring in unrelated surnames that
+     merely share a phonetic key. *)
+  let extra_results =
+    List.map
+      (fun q ->
+        let l, _, _ = search_surname_list conf base q in
+        let qs = Name.strip_lower q in
+        List.filter
+          (fun (_, (strl, _)) ->
+            StrSet.exists (fun s -> Name.strip_lower s = qs) strl)
+          l)
+      extra
+  in
+  let extra_names =
+    List.concat_map
+      (fun l -> List.concat_map (fun (_, (strl, _)) -> StrSet.elements strl) l)
+      extra_results
+  in
+  let extra_iperl =
+    List.fold_left
+      (fun acc l ->
+        List.fold_left
+          (fun acc (_, (_, il)) ->
+            List.fold_left (fun s i -> Iper.Set.add i s) acc il)
+          acc l)
+      Iper.Set.empty extra_results
+  in
+  let primary_strl =
+    List.fold_left
+      (fun acc (_, (strl, _)) -> StrSet.union acc strl)
+      StrSet.empty list0
+  in
+  let all_names =
+    List.sort_uniq String.compare
+      ((x :: extra) @ StrSet.elements primary_strl @ extra_names)
+  in
+  let suggestions = collect_surname_suggestions conf base iperl0 all_names in
+  let names_lower =
+    List.map Name.lower (StrSet.elements primary_strl @ extra_names)
+    |> List.sort_uniq String.compare
+  in
+  let queries_lower =
+    List.map Name.lower (x :: extra) |> List.sort_uniq String.compare
+  in
   let () = SosaCache.build_sosa_ht conf base in
   match p_getenv conf.env "o" with
   | Some "i" ->
-      let pl =
-        List.fold_right (fun ip ipl -> pget conf base ip :: ipl) iperl []
+      let iperl_set =
+        List.fold_left (fun s i -> Iper.Set.add i s) extra_iperl iperl0
       in
+      let iperl = Iper.Set.elements iperl_set in
       let pl =
         List.fold_right
-          (fun p pl ->
-            if (not (is_hide_names conf p)) || authorized_age conf base p then
-              p :: pl
-            else pl)
-          pl []
+          (fun ip acc ->
+            let p = pget conf base ip in
+            if
+              ((not (is_hide_names conf p)) || authorized_age conf base p)
+              && List.mem (Name.lower (Driver.p_surname base p)) queries_lower
+            then p :: acc
+            else acc)
+          iperl []
       in
-      print_family_alphabetic x conf base pl
+      print_family_alphabetic ~extra_names ~suggestions x conf base pl
   | _ -> (
-      let bhl = select_ancestors conf base _name_inj iperl in
+      let all_iperl =
+        List.fold_left (fun s i -> Iper.Set.add i s) extra_iperl iperl0
+        |> Iper.Set.elements
+      in
+      let bhl = select_ancestors conf base names_lower all_iperl in
       let bhl =
         List.map
           (fun bh ->
@@ -1131,11 +1378,16 @@ let search_surname_print conf base _not_found_fun x =
             })
           bhl
       in
-      match (bhl, list) with
-      | [], _ -> SrcfileDisplay.print_welcome conf base
-      | _, [ (s, (strl, _)) ] ->
-          print_one_surname_by_branch conf base x strl (bhl, s)
-      | _ -> ())
+      match bhl with
+      | [] ->
+          if extra = [] then _not_found_fun conf x
+          else SrcfileDisplay.print_welcome conf base
+      | _ ->
+          let canonical_str =
+            match StrSet.choose_opt primary_strl with Some s -> s | None -> x
+          in
+          print_one_surname_by_branch conf base x primary_strl ~extra_names
+            ~suggestions (bhl, canonical_str))
 
 let print_surname_details conf base query_string surnames_groups =
   let title_text =

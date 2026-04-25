@@ -4,12 +4,7 @@ open Util
 module Driver = Geneweb_db.Driver
 module Gutil = Geneweb_db.Gutil
 module Collection = Geneweb_db.Collection
-
-module PersMap = Map.Make (struct
-  type t = Driver.istr
-
-  let compare = compare
-end)
+module Istr = Driver.Istr
 
 module PersSet = Set.Make (struct
   type t = Driver.person
@@ -18,12 +13,6 @@ module PersSet = Set.Make (struct
 end)
 
 module StringSet = Set.Make (String)
-
-module IstrSet = Set.Make (struct
-  type t = Driver.istr
-
-  let compare = compare
-end)
 
 (* if env parameter "all" is "on", then we should search for places
    without suburb.
@@ -95,12 +84,12 @@ let get_data conf =
 
 let get_all_data conf base =
   let get_p, get_pe, get_f, get_fe = get_data conf in
-  let aux : 'a. 'a -> IstrSet.t -> ('a -> Driver.istr list) -> IstrSet.t =
+  let aux : 'a. 'a -> Istr.Set.t -> ('a -> Driver.istr list) -> Istr.Set.t =
    fun arg acc get ->
     let strings = get arg in
     List.fold_left
       (fun acc istr ->
-        if not (Driver.Istr.is_empty istr) then IstrSet.add istr acc else acc)
+        if not (Driver.Istr.is_empty istr) then Istr.Set.add istr acc else acc)
       acc strings
   in
   let acc =
@@ -112,7 +101,7 @@ let get_all_data conf base =
         List.fold_left
           (fun acc fn -> List.fold_left (fun acc e -> aux e acc fn) acc pevents)
           acc get_pe)
-      IstrSet.empty
+      Istr.Set.empty
       (Geneweb_db.Driver.ipers base)
   in
   let acc =
@@ -130,16 +119,16 @@ let get_all_data conf base =
         acc
         (Geneweb_db.Driver.ifams base)
   in
-  IstrSet.elements acc
+  Istr.Set.elements acc
 
 let get_person_from_data conf base =
   let get_p, get_pe, get_f, get_fe = get_data conf in
   let istr = Driver.Istr.of_string @@ (List.assoc "key" conf.env :> string) in
   let add acc (istr : Driver.istr) p =
-    try PersMap.add istr (PersSet.add p @@ PersMap.find istr acc) acc
-    with Not_found -> PersMap.add istr (PersSet.add p PersSet.empty) acc
+    try Istr.Map.add istr (PersSet.add p @@ Istr.Map.find istr acc) acc
+    with Not_found -> Istr.Map.add istr (PersSet.add p PersSet.empty) acc
   in
-  let aux (fn : PersSet.t PersMap.t -> Driver.istr -> PersSet.t PersMap.t) arg
+  let aux (fn : PersSet.t Istr.Map.t -> Driver.istr -> PersSet.t Istr.Map.t) arg
       acc get =
     let istr' = get arg in
     (* FIXME was istr = istr' ! is this correct *)
@@ -156,7 +145,7 @@ let get_person_from_data conf base =
           (fun acc fn ->
             List.fold_left (fun acc e -> aux add e acc fn) acc pevents)
           acc get_pe)
-      PersMap.empty
+      Istr.Map.empty
       (Geneweb_db.Driver.ipers base)
   in
   let acc =
@@ -180,7 +169,7 @@ let get_person_from_data conf base =
         acc
         (Geneweb_db.Driver.ifams base)
   in
-  PersMap.fold
+  Istr.Map.fold
     (fun istr pset acc -> (istr, PersSet.elements pset) :: acc)
     acc []
 
@@ -189,8 +178,7 @@ let combine_by_ini ini list =
   Mutil.groupby
     ~key:(fun (_, s) ->
       let s = Place.without_suburb s in
-      if Utf8.length s >= len then Utf8.sub s 0 len
-      else s ^ String.make (len - String.length s) ' ')
+      if Utf8.length s >= len then Utf8.sub s 0 len else s)
     ~value:(fun x -> x)
     list
 
@@ -615,8 +603,7 @@ let build_list_short conf list =
       List.rev_map
         (fun (_, s) ->
           let s = Place.without_suburb s in
-          if String.length s > i then String.sub s 0 (Utf8.next s i)
-          else s ^ String.make (i + 1 - String.length s) ' ')
+          if String.length s > i then String.sub s 0 (Utf8.next s i) else s)
         l
     in
     (* Fonction pour supprimer les doublons. *)
@@ -628,7 +615,9 @@ let build_list_short conf list =
     in
     let inis = remove_dup inis in
     match inis with
-    | [ ini ] -> build_ini list (String.length ini)
+    | [ ini ] ->
+        let new_i = String.length ini in
+        if new_i <= i then [ ini ] else build_ini list new_i
     | list -> List.sort Gutil.alphabetic_order list
   in
   build_ini list (String.length ini)

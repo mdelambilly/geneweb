@@ -3,6 +3,7 @@ open Def
 module Driver = Geneweb_db.Driver
 module Gutil = Geneweb_db.Gutil
 module Collection = Geneweb_db.Collection
+module Dirs = Geneweb_dirs
 
 let debug = ref false
 let fname = ref ""
@@ -15,7 +16,7 @@ let speclist =
       Fmt.str
         "<DIR> Specify where the bases directory with databases is installed \
          (default if empty is %S)."
-        Secure.default_base_dir );
+        (Dirs.name Secure.default_base_dir) );
     ("-debug", Arg.Set debug, " Debug mode.");
   ]
 
@@ -44,6 +45,7 @@ let notes_links s =
           in
           loop list_nt list_ind (pos + 1) j
       | NotesLinks.WLwizard (j, _, _) -> loop list_nt list_ind (pos + 1) j
+      | NotesLinks.WLimage (j, _, _, _) -> loop list_nt list_ind pos j
       | NotesLinks.WLnone (j, _) -> loop list_nt list_ind pos j
   in
   loop [] [] 1 0

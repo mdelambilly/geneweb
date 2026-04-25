@@ -7,6 +7,9 @@ open Util
 module Sosa = Geneweb_sosa
 module Driver = Geneweb_db.Driver
 module Gutil = Geneweb_db.Gutil
+module Plugin = Geneweb_plugin
+module Server = Geneweb_http.Server
+module Code = Geneweb_http.Code
 
 let person_is_std_key conf base p k =
   let k = Name.strip_lower k in
@@ -261,7 +264,7 @@ let person_selected_with_redirect conf base p =
       RelationDisplay.print conf base p p1
   | Some _ -> request_issue conf base ~key:"incorrect em value"
   | None ->
-      Wserver.http_redirect_temporarily
+      Server.http_redirect_temporarily
         (commd conf ^^^ Util.acces conf base p :> string)
 
 let updmenu_print = Perso.interp_templ "updmenu"
@@ -275,7 +278,7 @@ let unknown conf n =
     Output.print_string conf (Util.escape_html n);
     Output.print_sstring conf {|"|}
   in
-  Output.status conf Def.Not_Found;
+  Output.status conf Code.Not_Found;
   Hutil.header ~error:true conf title;
   Hutil.trailer conf
 
@@ -327,21 +330,23 @@ let make_henv conf base =
     else conf
   in
   let conf =
-    let fn, oc, sn = GWPARAM.split_key conf.userkey in
-    match
-      Geneweb_db.Driver.person_of_key base fn sn
-        (if oc = "" then 0 else int_of_string oc)
-    with
-    | Some ip ->
-        {
-          conf with
-          semi_public =
-            (if conf.semi_public then
-               Driver.get_access (Driver.poi base ip) = SemiPublic
-             else true);
-          user_iper = Some ip;
-        }
-    | None -> conf
+    if conf.userkey = "" then conf
+    else
+      let fn, oc, sn = GWPARAM.split_key conf.userkey in
+      match
+        Geneweb_db.Driver.person_of_key base fn sn
+          (if oc = "" then 0 else int_of_string oc)
+      with
+      | Some ip ->
+          {
+            conf with
+            semi_public =
+              (if conf.semi_public then
+                 Driver.get_access (Driver.poi base ip) = SemiPublic
+               else true);
+            user_iper = Some ip;
+          }
+      | None -> conf
   in
   let aux param conf =
     match Util.p_getenv conf.env param with
@@ -446,7 +451,7 @@ let try_plugin list conf base_name m =
     else fun (ns, fn) ->
       (List.mem ns conf.forced_plugins || List.mem ns list) && fn conf base_name
   in
-  List.exists fn (Hashtbl.find_all GwdPlugin.ht m)
+  List.exists fn (Hashtbl.find_all Plugin.ht m)
 
 let w_lock ~onerror fn conf (base_name : string option) =
   let bfile = !GWPARAM.bpath conf.bname in
@@ -502,16 +507,16 @@ let w_person ~none fn conf base =
 
 let w_wizard fn conf base =
   if conf.wizard then fn conf base
-  else if conf.just_friend_wizard then GWPARAM.output_error conf Def.Forbidden
+  else if conf.just_friend_wizard then GWPARAM.output_error conf Code.Forbidden
   else
     (* FIXME: send authentification headers *)
-    GWPARAM.output_error conf Def.Unauthorized
+    GWPARAM.output_error conf Code.Unauthorized
 
 let treat_request =
   let w_lock = w_lock ~onerror:(fun conf _ -> Update.error_locked conf) in
   let w_base =
     let none conf =
-      if conf.bname = "" then GWPARAM.output_error conf Def.Bad_Request
+      if conf.bname = "" then GWPARAM.output_error conf Code.Bad_Request
       else (
         Notif.error
           ~title:(Util.transl conf "NOTIF_TT unknown base")
@@ -520,7 +525,7 @@ let treat_request =
              conf.bname);
         let conf = Notif.inject_pending conf in
         try Templ.output_simple conf Templ.Env.empty "index"
-        with _ -> GWPARAM.output_error conf Def.Not_Found)
+        with _ -> GWPARAM.output_error conf Code.Not_Found)
     in
     w_base ~none
   in
@@ -571,16 +576,17 @@ let treat_request =
             | Some list -> String.split_on_char ',' list |> List.map String.trim
           in
           if List.mem "*" plugins then
-            List.iter (fun (_, fn) -> fn conf bfile) !GwdPlugin.se
+            List.iter (fun (_, fn) -> fn conf bfile) !Plugin.se
           else
             List.iter
               (fun (ns, fn) -> if List.mem ns plugins then fn conf bfile)
-              !GwdPlugin.se;
+              !Plugin.se;
           let m = Option.value ~default:"" (p_getenv conf.env "m") in
           if not @@ try_plugin plugins conf bfile m then
             ((if
                 List.assoc_opt "counter" conf.base_env <> Some "no"
                 && m <> "IM" && m <> "IM_C" && m <> "SRC" && m <> "DOC"
+                && m <> "IMA"
               then
                 match
                   if only_special_env conf.env then
@@ -693,6 +699,12 @@ let treat_request =
                      ImageDisplay.print_html conf)
              | "F" -> w_base @@ w_person @@ Perso.interp_templ "family"
              | "FIM" -> w_base @@ ImageDisplay.print_blason
+             | "FOLDER_IMAGES" ->
+                 w_base @@ fun conf _base ->
+                 if conf.wizard then
+                   ImageDisplay.print_folder_images_json conf
+                     (Util.p_getenv conf.env "folder")
+                 else Hutil.incorrect_request conf
              | "H" -> (
                  w_base @@ fun conf base ->
                  match p_getenv conf.env "v" with
@@ -707,6 +719,8 @@ let treat_request =
                  @@ fun conf _ -> HistoryDiffDisplay.print_clean_ok conf
              | "HIST_DIFF" -> w_base @@ HistoryDiffDisplay.print
              | "HIST_SEARCH" -> w_base @@ History.print_search
+             | "IMA" ->
+                 w_base @@ fun conf _base -> ImageDisplay.print_album_image conf
              | "IM_C" -> w_base @@ ImageCarrousel.print_c ~saved:false
              | "IM_C_S" -> w_base @@ ImageCarrousel.print_c ~saved:true
              | "IM" -> w_base @@ ImageDisplay.print
@@ -715,6 +729,8 @@ let treat_request =
              | "INV_FAM" -> w_wizard @@ w_base @@ UpdateFam.print_inv
              | "INV_FAM_OK" ->
                  w_wizard @@ w_lock @@ w_base @@ UpdateFamOk.print_inv
+             | "ISOLATED" ->
+                 w_base @@ fun conf base -> Perso.print_isolated conf base
              | "KILL_ANC" ->
                  w_wizard @@ w_lock @@ w_base
                  @@ MergeIndDisplay.print_kill_ancestors
@@ -961,7 +977,7 @@ let treat_request =
                                ~key:"incorrect fallback for relation")))
              | "REQUEST" ->
                  w_wizard @@ fun _ _ ->
-                 Output.status conf Def.OK;
+                 Output.status conf Code.OK;
                  Output.header conf "Content-type: text";
                  List.iter
                    (fun s ->
@@ -989,6 +1005,7 @@ let treat_request =
                  | _ -> request_issue conf base ~key:"missing v param")
              | "STAT" ->
                  w_base @@ fun conf _ -> BirthDeathDisplay.print_statistics conf
+             | "STATS" -> w_base @@ Statistics.print
              | "TP" -> (
                  w_base @@ fun conf base ->
                  match Util.p_getenv conf.env "v" with

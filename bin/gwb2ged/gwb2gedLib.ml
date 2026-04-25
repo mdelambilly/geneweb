@@ -75,7 +75,7 @@ let hebrew_txt =
 
 let ged_month cal m =
   match cal with
-  | Dgregorian | Djulian ->
+  | Adef.Dgregorian | Djulian ->
       if m >= 1 && m <= Array.length month_txt then month_txt.(m - 1)
       else failwith "ged_month"
   | Dfrench ->
@@ -87,7 +87,7 @@ let ged_month cal m =
 
 let encode opts s =
   match opts.Gwexport.charset with
-  | Gwexport.Ansel -> Ansel.of_iso_8859_1 @@ Mutil.iso_8859_1_of_utf_8 s
+  | Gwexport.Ansel -> Ansel.of_utf_8 s
   | Gwexport.Ascii | Gwexport.Ansi -> Mutil.iso_8859_1_of_utf_8 s
   | Gwexport.Utf8 -> s
 
@@ -160,24 +160,21 @@ let rec display_note_aux opts tagn s len i =
         (String.length (string_of_int (succ tagn) ^ " CONC "))
         i)
     else (* continue same gedcom line *)
-      (* FIXME: Rewrite this so we can get rid of this custom [nbc] *)
-      let nbc c =
-        if Char.code c < 0b10000000 then 1
-        else if Char.code c < 0b11000000 then -1
-        else if Char.code c < 0b11100000 then 2
-        else if Char.code c < 0b11110000 then 3
-        else if Char.code c < 0b11111000 then 4
-        else if Char.code c < 0b11111100 then 5
-        else if Char.code c < 0b11111110 then 6
-        else -1
+      let is_utf8_continuation c =
+        let b = Char.code c in
+        b >= 0x80 && b < 0xC0
       in
-      (* FIXME: avoid this buffer *)
       let b = Buffer.create 4 in
       let rec output_onechar () =
-        if !j = String.length s then decr j (* non wide char / UTF-8 char *)
+        if !j = String.length s then decr j
+        else if opts.Gwexport.charset = Gwexport.Ansel then (
+          Buffer.add_char b s.[!j];
+          if is_utf8_continuation s.[!j] && !j + 1 < String.length s then (
+            incr j;
+            Buffer.add_char b s.[!j]))
         else if opts.Gwexport.charset <> Gwexport.Utf8 then
-          Buffer.add_char b s.[i] (* 1 to 4 bytes UTF-8 wide char *)
-        else if i = !j || nbc s.[!j] = -1 then (
+          Buffer.add_char b s.[i]
+        else if i = !j || is_utf8_continuation s.[!j] then (
           Buffer.add_char b s.[!j];
           incr j;
           output_onechar ())
@@ -284,7 +281,16 @@ let ged_name opts base per =
   List.iter
     (fun s ->
       Printf.ksprintf (oc opts) "1 NAME %s\n" (encode opts (Driver.sou base s)))
-    (Driver.get_aliases per)
+    (Driver.get_aliases per);
+  let sn =
+    encode opts (Mutil.nominative (Driver.sou base (Driver.get_surname per)))
+  in
+  List.iter
+    (fun n ->
+      Printf.ksprintf (oc opts) "1 NAME %s /%s/\n"
+        (encode opts (Driver.sou base n))
+        sn)
+    (Driver.get_first_names_aliases per)
 
 let ged_sex opts per =
   match Driver.get_sex per with
@@ -293,13 +299,20 @@ let ged_sex opts per =
   | Neuter -> ()
 
 let ged_calendar opts = function
-  | Dgregorian -> ()
+  | Adef.Dgregorian -> ()
   | Djulian -> Printf.ksprintf (oc opts) "@#DJULIAN@ "
   | Dfrench -> Printf.ksprintf (oc opts) "@#DFRENCH R@ "
   | Dhebrew -> Printf.ksprintf (oc opts) "@#DHEBREW@ "
 
+let ged_bce opts =
+  match opts.Gwexport.charset with Gwexport.Utf8 -> "BCE" | _ -> "B.C."
+
+let ged_year opts y =
+  if y >= 0 then Printf.ksprintf (oc opts) "%d" y
+  else Printf.ksprintf (oc opts) "%d %s" (-y) (ged_bce opts)
+
 let ged_date_dmy opts dt cal =
-  (match dt.prec with
+  (match dt.Adef.prec with
   | Sure -> ()
   | About -> Printf.ksprintf (oc opts) "ABT "
   | Maybe -> Printf.ksprintf (oc opts) "EST "
@@ -310,8 +323,7 @@ let ged_date_dmy opts dt cal =
   ged_calendar opts cal;
   if dt.day <> 0 then Printf.ksprintf (oc opts) "%02d " dt.day;
   if dt.month <> 0 then Printf.ksprintf (oc opts) "%s " (ged_month cal dt.month);
-  if dt.year >= 0 then Printf.ksprintf (oc opts) "%d" dt.year
-  else Printf.ksprintf (oc opts) "%d BCE" (-dt.year);
+  ged_year opts dt.year;
   match dt.prec with
   | OrYear dmy2 ->
       Printf.ksprintf (oc opts) " AND ";
@@ -319,18 +331,18 @@ let ged_date_dmy opts dt cal =
       if dmy2.day2 <> 0 then Printf.ksprintf (oc opts) "%02d " dmy2.day2;
       if dmy2.month2 <> 0 then
         Printf.ksprintf (oc opts) "%s " (ged_month cal dmy2.month2);
-      Printf.ksprintf (oc opts) "%d" dmy2.year2
+      ged_year opts dmy2.year2
   | YearInt dmy2 ->
       Printf.ksprintf (oc opts) " AND ";
       ged_calendar opts cal;
       if dmy2.day2 <> 0 then Printf.ksprintf (oc opts) "%02d " dmy2.day2;
       if dmy2.month2 <> 0 then
         Printf.ksprintf (oc opts) "%s " (ged_month cal dmy2.month2);
-      Printf.ksprintf (oc opts) "%d" dmy2.year2
+      ged_year opts dmy2.year2
   | _ -> ()
 
 let ged_date opts = function
-  | Dgreg (d, Dgregorian) -> ged_date_dmy opts d Dgregorian
+  | Adef.Dgreg (d, Dgregorian) -> ged_date_dmy opts d Dgregorian
   | Dgreg (d, Djulian) ->
       ged_date_dmy opts (Calendar.julian_of_gregorian d) Djulian
   | Dgreg (d, Dfrench) ->

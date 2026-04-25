@@ -1,4 +1,4 @@
-<!-- $Id: toolbar.txt v7.1 09/03/2025 03:17:13 $ -->
+<!-- $Id: toolbar.txt v7.1 05/04/2026 $ -->
 <style>
 %if;(e.m="MOD_NOTES")
 body {
@@ -8,7 +8,7 @@ body {
 %end;
 
 .navbar.fixed-top {
-  background-color: rgba(255, 255, 255, 0.95) !important; /* Slightly transparent background */
+  background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent background */
   backdrop-filter: blur(5px); /* Blur effect for content underneath */
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
@@ -50,6 +50,13 @@ body {
   margin-top: 1rem;
 }
 
+@media (max-width: 991px) {
+  .editor-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+}
+
 .editor-main {
   height: 100%;
 }
@@ -71,7 +78,7 @@ body {
 }
 
 .navbar {
-  border-bottom: none !important;
+  border-bottom: none;
 }
 
 .toolbar-centered {
@@ -91,18 +98,18 @@ body {
   white-space: nowrap;
 }
 </style>
-<nav id="nav-note" class="containernavbar navbar-expand-lg navbar-light bg-light%if;("NOTES" in e.m) fixed-top%end; px-2 py-0">
+<nav id="nav-note" class="container navbar navbar-expand-lg navbar-light bg-light%if;("NOTES" in e.m) fixed-top%end; px-2 py-0">
   <div class="container">
-    <button class="navbar-toggler" type="button" data-toggle="collapse"
-      data-target="#toolbarCollapse" aria-controls="toolbarCollapse"
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+      data-bs-target="#toolbarCollapse" aria-controls="toolbarCollapse"
       aria-expanded="false" aria-label="[*toolbar]">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="toolbarCollapse">
       <div class="mx-auto">
         <div class="navbar-nav flex-row flex-wrap">
-          <div class="nav-item dropdown ml-2">
-            <a class="nav-link dropdown-toggle" href="#" id="htmlDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <div class="nav-item dropdown ms-2">
+            <a class="nav-link dropdown-toggle" href="#" id="htmlDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               HTML
             </a>
             <div class="dropdown-menu" aria-labelledby="htmlDropdown">
@@ -115,7 +122,7 @@ body {
           </div>
 
           <div class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="headingsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="#" id="headingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Title
             </a>
             <div class="dropdown-menu" aria-labelledby="headingsDropdown">
@@ -128,8 +135,8 @@ body {
             </div>
           </div>
 
-          <div class="nav-item dropdown mr-2">
-            <a class="nav-link dropdown-toggle" href="#" id="formatDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <div class="nav-item dropdown me-2">
+            <a class="nav-link dropdown-toggle" href="#" id="formatDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Format
             </a>
             <div class="dropdown-menu" aria-labelledby="formatDropdown">
@@ -152,8 +159,8 @@ body {
             </div>
           </div>
 
-          <div class="nav-item dropdown mr-2">
-            <a class="nav-link dropdown-toggle" href="#" id="listsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <div class="nav-item dropdown me-2">
+            <a class="nav-link dropdown-toggle" href="#" id="listsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Lists
             </a>
             <div class="dropdown-menu" aria-labelledby="listsDropdown">
@@ -165,8 +172,8 @@ body {
             </div>
           </div>
 
-          <div class="nav-item dropdown mr-3">
-            <a class="nav-link dropdown-toggle" href="#" id="miscDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <div class="nav-item dropdown me-3">
+            <a class="nav-link dropdown-toggle" href="#" id="miscDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               [*note/notes]1
             </a>
             <div class="dropdown-menu" aria-labelledby="miscDropdown">
@@ -181,8 +188,8 @@ body {
             </div>
           </div>
 
-          <div class="nav-item dropdown mr-2">
-            <a class="nav-link dropdown-toggle" href="#" id="tocDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <div class="nav-item dropdown me-2">
+            <a class="nav-link dropdown-toggle" href="#" id="tocDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               [*visualize/show/hide/summary]3
             </a>
             <div class="dropdown-menu" aria-labelledby="tocDropdown">
@@ -192,8 +199,8 @@ body {
             </div>
           </div>
 
-          <div class="nav-item dropdown mr-2">
-            <a class="nav-link dropdown-toggle" href="#" id="personDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <div class="nav-item dropdown me-2">
+            <a class="nav-link dropdown-toggle" href="#" id="personDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               [*person/persons]0
             </a>
             <div class="dropdown-menu" aria-labelledby="personDropdown">
@@ -204,8 +211,8 @@ body {
             </div>
           </div>
         %if;(e.m="MOD_NOTES")
-          <div class="nav-item mr-2">
-            <a class="nav-link" data-toggle="modal" data-target="#init_gallery" href="javascript:;" onclick="init_tool();" title="Initialise imagemap">
+          <div class="nav-item me-2">
+            <a class="nav-link" data-bs-toggle="modal" data-bs-target="#init_gallery" href="#init_gallery" title="Initialise imagemap">
               <i class="fa fa-images"></i> Imap
             </a>
           </div>
@@ -216,54 +223,55 @@ body {
   </div>
 </nav>
 %if;(e.m="MOD_NOTES")
-<div class="modal fade" id="init_gallery" tabindex="-1" role="dialog" aria-labbelledby="init_gallery_label" aria-hidden="true">
-  <div class="modal-dialog role="document">
+<div class="modal fade" id="init_gallery" tabindex="-1" aria-labelledby="init_gallery_label" aria-hidden="true">
+  <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="init_gallery_label">[*create::image map]</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div class="form-group row">
-          <label for="page_title" class="col-sm-2 col-form-label">[*title/titles]0</label>
+        <div class="mb-3 row">
+          <label for="ig_page_title" class="col-sm-2 col-form-label">[*title/titles]0</label>
           <div class="col-sm-10">
-            <input type="text" class="form-control" id="page_title" name="page_title">
-            <div class="invalid-feedback">
-              [*title/titles]0 [*is required]
-            </div>
+            <input type="text" class="form-control" id="ig_page_title" name="ig_page_title">
           </div>
         </div>
-        <div class="form-group row">
-          <label for="fname" class="col-sm-2 col-form-label">[*file]</label>
+        <div class="mb-2 row">
+          <label for="ig_fname" class="col-sm-2 col-form-label">[*file]</label>
           <div class="col-sm-10">
-            <input type="text" class="form-control" id="fname" name="fname" list="src_images">
-            <div class="invalid-feedback">
-              [*file] [*is required]
-            </div>
-            <datalist id="src_images">
+            <input type="text" class="form-control" id="ig_fname" name="ig_fname"
+                   list="ig_src_images" placeholder="[*choose an image]">
+            <datalist id="ig_src_images">
               %src_images_list;
+            </datalist>
+          </div>
+        </div>
+        <div class="mb-2 row">
+          <div class="col-sm-2 text-center">
+            <span class="text-body-secondary small">[or]</span>
+          </div>
+          <div class="col-sm-10"></div>
+        </div>
+        <div class="mb-3 row">
+          <label for="ig_folder" class="col-sm-2 col-form-label">[*folder/folders]0</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="ig_folder" name="ig_folder"
+                   list="ig_src_folders" placeholder="[*choose a folder]">
+            <datalist id="ig_src_folders">
+              %src_albums_list;
             </datalist>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary" onclick="init_gallery();">OK</button>
+        <button type="button" class="btn btn-primary" id="ig_ok_btn">OK</button>
       </div>
     </div>
   </div>
 </div>
 <script>
-function init_gallery() {
-  var title = $("#page_title").val();
-  var fname = $("#fname").val();
-  var res = {
-    "title": title,
-    "img": fname,
-  };
-  $("#notes_comments").val( "TITLE=" + title +"\nTYPE=gallery\n" + JSON.stringify(res, null, 2) );
-  $('#init_gallery').modal('hide')
-}
+const GW = Object.assign(window.GW || {}, { prefix: "%prefix;" });
 </script>
+<script src="%etc_prefix;js/init_gallery.min.js?hash=%apply;hash%with;%etc_prefix;js/init_gallery.min.js%end;"></script>
 %end;

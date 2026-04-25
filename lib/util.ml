@@ -9,6 +9,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 module Sosa = Geneweb_sosa
 module Driver = Geneweb_db.Driver
 module Gutil = Geneweb_db.Gutil
+module Code = Geneweb_http.Code
 
 let make_link ?(title = "") ?(css_class = "") ?(tabindex = None)
     ?(aria_label = "") ?(disabled = false) ?(target = None) ?(data_attrs = [])
@@ -546,7 +547,7 @@ let html ?(content_type = "text/html") conf =
   Output.header conf "Connection: close"
 
 let unauthorized conf auth_type =
-  Output.status conf Def.Unauthorized;
+  Output.status conf Code.Unauthorized;
   if not conf.cgi then
     Output.header conf "WWW-Authenticate: Basic realm=\"%s\"" auth_type;
   Output.header conf "Content-type: text/html; charset=%s" conf.charset;
@@ -808,7 +809,7 @@ let nobtit conf base p =
   Driver.nobtitles base conf.allowed_titles conf.denied_titles p
 
 let strictly_after_private_years a lim =
-  if a.year > lim then true
+  if a.Adef.year > lim then true
   else if a.year < lim then false
   else a.month > 0 || a.day > 0
 
@@ -1063,7 +1064,7 @@ let mod_ind_link conf p (s : Adef.safe_string) =
     let s = (s :> string) in
     let href = "m=MOD_IND&i=" ^ Driver.Iper.to_string (Driver.get_iper p) in
     let txt =
-      if s = "" then {|<i class="fa fa-wrench fa-xs ml-1" alt=" (edit)"></i>|}
+      if s = "" then {|<i class="fa fa-wrench fa-xs ms-1" alt=" (edit)"></i>|}
       else s
     in
     Format.sprintf {|<a href="%s%s">%s</a>|} (commd conf :> string) href txt
@@ -1078,7 +1079,8 @@ let reference_flags with_id conf base p (s : Adef.safe_string) =
   if (not (GWPARAM.p_auth conf base p)) || cgl then s
   else
     "<a href=\""
-    ^<^ (commd conf ^^^ acces conf base p :> Adef.safe_string)
+    ^<^ (commd ~excl:[ "em"; "ei"; "et" ] conf ^^^ acces conf base p
+          :> Adef.safe_string)
     ^^^ (if with_id then "\" id=\"i" else "")
     ^<^ (if with_id then Driver.Iper.to_string iper else "")
     ^<^ "\">" ^<^ s ^>^ "</a>"
@@ -1223,7 +1225,9 @@ let create_env s =
         Adef.encoded (String.sub s (succ i) (String.length s - succ i)) )
     else separate (succ i) s
   in
-  List.map (separate 0) (get_assoc 0 0)
+  List.filter_map
+    (fun s -> if s = "" then None else Some (separate 0 s))
+    (get_assoc 0 0)
 
 let std_color conf (s : Adef.safe_string) =
   "<span style=\"color:" ^<^ conf.highlight ^<^ "\">" ^<^ s ^>^ "</span>"
@@ -1474,18 +1478,6 @@ let is_full_html_template conf fname =
       close_in ic;
       result
 
-let body_prop conf =
-  (* NOTE: assumes http access to the server. https handled by proxy *)
-  (* TODO verify cgi mode *)
-  let server = Mutil.extract_param "Host: " '\n' conf.request in
-  let bname_pwd = (commd conf :> string) in
-  let http_str = Format.sprintf "http://%s/%s" server bname_pwd in
-  try
-    match List.assoc "body_prop" conf.base_env with
-    | "" -> ""
-    | s -> " " ^ Str.replace_first (Str.regexp "%S") http_str s
-  with Not_found -> ""
-
 let get_server_string conf =
   if not conf.cgi then Mutil.extract_param "host: " '\r' conf.request
   else
@@ -1680,6 +1672,8 @@ let expand_env =
 
 (* in srcfileDisplay, there is a macro function with many more macros! *)
 (* not necessarily easy to transpose in this context (base absent) *)
+(* Warning: env is not the classical environment! *)
+(* it is: (char * (unit -> string)) list (see Perso.get_note_or_source) *)
 let string_with_macros conf env s =
   let start_with s i p =
     i + String.length p <= String.length s
@@ -1776,6 +1770,13 @@ let string_with_macros conf env s =
     else Buffer.contents buff
   in
   loop Out 0
+
+let body_prop conf =
+  try
+    match List.assoc "body_prop" conf.base_env with
+    | "" -> ""
+    | s -> " " ^ string_with_macros conf [] s
+  with Not_found -> ""
 
 let place_of_string conf place =
   match List.assoc_opt "place" conf.base_env with
@@ -2171,12 +2172,14 @@ let string_of_decimal_num conf f =
 
 let find_person_in_env_aux conf base env_i env_p env_n env_occ =
   match p_getenv conf.env env_i with
-  | Some i when i <> "" ->
-      let i = Geneweb_db.Driver.Iper.of_string i in
-      if Geneweb_db.Driver.iper_exists base i then
-        let p = pget conf base i in
-        if is_hidden p then None else Some p
-      else None
+  | Some i when i <> "" -> (
+      try
+        let i = Geneweb_db.Driver.Iper.of_string i in
+        if Geneweb_db.Driver.iper_exists base i then
+          let p = pget conf base i in
+          if is_hidden p then None else Some p
+        else None
+      with Failure _ -> None)
   | _ -> (
       match (p_getenv conf.env env_p, p_getenv conf.env env_n) with
       | None, Some n -> (
@@ -2841,6 +2844,8 @@ let rec in_text case_sens s m =
           if in_text case_sens s text then true else loop false j
       | NotesLinks.WLperson (j, (fn, sn, _), None, _, _) ->
           if in_text case_sens s (fn ^ " " ^ sn) then true else loop false j
+      | NotesLinks.WLimage (j, _, alt, _) ->
+          if in_text case_sens s alt then true else loop false j
       | NotesLinks.WLnone (j, _) -> loop false j
     else
       match start_equiv_with case_sens s m i with
@@ -3468,7 +3473,7 @@ let print_loading_overlay conf ?custom_translation_key () =
     {|<div class="loading-overlay hidden">
   <div class="text-center">
     <div class="spinner-border text-light mb-3" role="status">
-      <span class="sr-only">Loading…</span>
+      <span class="visually-hidden">Loading…</span>
     </div>
     <h4>%s</h4>
     <p>%s</p>
@@ -3526,8 +3531,8 @@ let evar_buttons conf _query_string evar_l title_text =
         acc
         ^ Printf.sprintf
             {|<a href="%s"
-            class="btn btn-outline-secondary btn-sm ml-auto">
-            <i class="fa fa-%s mr-1"></i>%s</a>|}
+            class="btn btn-outline-secondary btn-sm ms-auto">
+            <i class="fa fa-%s me-1"></i>%s</a>|}
             toggle_url
             (if toggle then "plus" else "minus")
             button_text)
