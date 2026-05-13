@@ -708,6 +708,26 @@
   %)
   %apply;insert_witness(xcnt, "0", "evt_name")
 %end;
+
+%if;roglo;
+  %if;is_semi_public;
+    <h2>
+    <span style="color:red">ATTENTION</span>
+    </h2>
+    Vous vous apprétez à modifier les données concernant un Ami.<br>
+    Si vous changez son patronyme, son prénom ou son numéro d'occurrence sans prévenir l'administration de Roglo,<br>
+    ceci aura pour effet (indésirable) de supprimer l'accès "Ami" de cette personne
+    jusqu'à ce que les nouvelles informations<br>
+    soient répercutées dans la base des Amis de Roglo
+    gérée par le service Assoconnect (1 à 2 semaine de délai!).<br>
+    Assurez vous tout d'abord que les modifications projetées ne vont pas à l'encontre du consentement de l'interessé.<br>
+    Envoyer ensuite un mail à <a href="mailto:association@association-roglo.fr
+    ?subject=Modification de %first_name.%occ %surname">association@association-roglo.fr</a>
+    pour faire procéder à la correction en y joignant bien sûr tous<br>
+    les éléments de la modification projetée.
+  %end;
+%end;
+
 %let;l_on1s;onkeydown="if (event.keyCode == 13) if (!event.shiftKey) javascript:document.upd.submit()"%in;
 <form name="upd" method="post" action="%action;">
   <div class="row">
@@ -1151,7 +1171,7 @@
         <input type="number" class="form-control" name="rxcnt_xvar_occ" min="0" value="%relation.xrel.occ;" id="rxcnt_xvar_occ" placeholder="">
       </div>
       <div class="col-sm-2">
-        <select class="form-select" name="rxcnt_xvar_p" id="rxcnt_xvar_p_selct">
+        <select class="form-select" name="rxcnt_xvar_p" id="rxcnt_xvar_p_selct"%if;(relation.xrel.index!="-1") data-pnoc-checked="%relation.xrel.first_name;|%relation.xrel.surname;|%if;(relation.xrel.occ!="" and relation.xrel.occ!="0")%relation.xrel.occ;%else;0%end;"%end;>
           <option value="link"%if;relation.xrel.link; selected%end;>[*link]0</option>
           <option value="create"%if;relation.xrel.create; selected%end;>[*create]0</option>
         </select>

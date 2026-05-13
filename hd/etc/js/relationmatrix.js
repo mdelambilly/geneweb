@@ -1,26 +1,25 @@
-/* relationMatrix.js - Gestion des modals pour le tableau de parenté */
+/* relationMatrix.js - Gestion des modals et hovers pour le tableau de parenté */
 const RelationMatrix = (() => {
   'use strict';
+
+  // Escape user-supplied text before HTML interpolation. Names from
+  // window.rmData.names go through this; coeff strings do not (they
+  // ship intentional markup like <sup> from the OCaml side).
+  const esc = s => String(s ?? '').replace(/[&<>"']/g,
+    c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
 
   /* Détection du mode CGI et stockage du paramètre base */
   const urlParams = new URLSearchParams(window.location.search);
   const baseParam = urlParams.get('b');
+  const labels = {};
 
   function getPersonName(iper) {
     if (!iper) return 'N/A';
-    if (window.rmData && window.rmData.names && window.rmData.names[iper]) {
-      return window.rmData.names[iper];
-    }
-    return 'iper:' + iper;
+    return window.rmData?.names?.[iper] ?? 'iper:' + iper;
   }
 
   function makePersonUrl(iper) {
     return '?' + (baseParam ? 'b=' + baseParam + '&' : '') + 'i=' + iper;
-  }
-
-  function makeEditUrl(iper) {
-    return '?' + (baseParam ? 'b=' + baseParam + '&' : '') +
-           'm=MOD_IND&i=' + iper;
   }
 
   /* URL vers le graphe de parenté m=RL (dag=on affiche tous les chemins) */
@@ -46,12 +45,12 @@ const RelationMatrix = (() => {
       let partner = null;
       let partnerIdx = -1;
 
-      if (anc1.f && anc1.f.length > 0) {
+      if (anc1.f?.length) {
         for (let idx2 = idx1 + 1; idx2 < ancestors.length; idx2++) {
           if (processed.has(idx2)) continue;
 
           const anc2 = ancestors[idx2];
-          if (anc2.f && anc2.f.length > 0) {
+          if (anc2.f?.length) {
             const commonFamily = anc1.f.some(f1 => anc2.f.includes(f1));
             if (commonFamily) {
               partner = anc2;
@@ -85,16 +84,16 @@ const RelationMatrix = (() => {
       const url2 = makePersonUrl(group.anc2.p);
       const rlUrl2 = makeRelationLinkUrl(group.anc2.p, l1, p1Iper, l2, p2Iper);
 
-      return '<span class="text-nowrap"><a href="' + url1 + '">' + name1 + '</a>' +
+      return '<span class="text-nowrap"><a href="' + url1 + '">' + esc(name1) + '</a>' +
              ' [<a href="' + rlUrl1 + '">' + group.anc1.c + '</a>]</span>' +
-             ' <span class="text-nowrap">&amp; <a href="' + url2 + '">' + name2 + '</a>' +
+             ' <span class="text-nowrap">&amp; <a href="' + url2 + '">' + esc(name2) + '</a>' +
              ' [<a href="' + rlUrl2 + '">' + group.anc2.c + '</a>]</span>';
     } else {
       const name = getPersonName(group.anc.p);
       const url = makePersonUrl(group.anc.p);
       const rlUrl = makeRelationLinkUrl(group.anc.p, l1, p1Iper, l2, p2Iper);
 
-      return '<span class="text-nowrap"><a href="' + url + '">' + name + '</a>' +
+      return '<span class="text-nowrap"><a href="' + url + '">' + esc(name) + '</a>' +
              ' [<a href="' + rlUrl + '">' + group.anc.c + '</a>]</span>';
     }
   }
@@ -105,7 +104,7 @@ const RelationMatrix = (() => {
 
     // Collecter tous les ancêtres et leurs niveaux
     sortedPaths.forEach(path => {
-      if (path.anc && path.anc.length > 0) {
+      if (path.anc?.length) {
         path.anc.forEach(anc => {
           if (!ancestorLevels.has(anc.p)) {
             ancestorLevels.set(anc.p, {
@@ -160,13 +159,13 @@ const RelationMatrix = (() => {
 
       const url = makeRelationLinkUrl(anc.iper, l1s, p1Iper, l2s, p2Iper);
       let result = '<span class="text-nowrap"><a href="' +
-                   makePersonUrl(anc.iper) + '">' + anc.name +
+                   makePersonUrl(anc.iper) + '">' + esc(anc.name) +
                    '</a> [<a href="' + url + '">' + anc.total + '</a>]</span>';
 
       if (anc.partner) {
         const pUrl = makeRelationLinkUrl(anc.partner.iper, l1s, p1Iper, l2s, p2Iper);
         result += ' <span class="text-nowrap">&amp; <a href="' +
-                  makePersonUrl(anc.partner.iper) + '">' + anc.partner.name +
+                  makePersonUrl(anc.partner.iper) + '">' + esc(anc.partner.name) +
                   '</a> [<a href="' + pUrl + '">' + anc.partner.total +
                   '</a>]</span>';
       }
@@ -180,11 +179,11 @@ const RelationMatrix = (() => {
     return html;
   }
 
-  function renderAllLevels(cellData) {
+  function renderAllLevels(cellData, url) {
     let html = '';
 
-    const p1Iper = cellData.i1 ? cellData.i1.p : '';
-    const p2Iper = cellData.i2 ? cellData.i2.p : '';
+    const p1Iper = cellData.i1?.p ?? '';
+    const p2Iper = cellData.i2?.p ?? '';
     const p1Name = getPersonName(p1Iper);
     const p2Name = getPersonName(p2Iper);
     const sortedPaths = [...cellData.data.paths].sort((a, b) => {
@@ -194,9 +193,9 @@ const RelationMatrix = (() => {
     html += '<table class="table table-sm mb-1">';
     html += '<tbody>';
 
-    sortedPaths.forEach((path, index) => {
+    sortedPaths.forEach(path => {
       let ancestorsHtml = '';
-      if (path.anc && path.anc.length > 0) {
+      if (path.anc?.length) {
         const groups = groupAncestorsByCouples(path.anc);
         const formattedGroups = groups.map(group =>
           formatAncestorGroup(group, path.l1, p1Iper, path.l2, p2Iper)
@@ -212,22 +211,57 @@ const RelationMatrix = (() => {
     html += '</tbody>';
     html += '<tfoot><tr>';
     html += '<td><i class="fa-solid fa-person-arrow-up-from-line"></i></td>';
-    html += '<td class="person"><a href="' + makePersonUrl(p1Iper) + '">' + p1Name + '</a></td>';
-    html += '<td class="person"><a href="' + makePersonUrl(p2Iper) + '">' + p2Name + '</a></td>';
+    html += '<td class="person"><a href="' + makePersonUrl(p1Iper) + '">' + esc(p1Name) + '</a></td>';
+    html += '<td class="person"><a href="' + makePersonUrl(p2Iper) + '">' + esc(p2Name) + '</a></td>';
     html += '<td><i class="fa-solid fa-person-arrow-down-to-line fa-flip-horizontal"></i></td>';
     html += '</tr></tfoot>';
     html += '</table>';
-
-    const table = document.getElementById('rm-table');
     html += '<div class="text-center">';
-    html += '<strong><a href="' + cellData.url + '" target="_blank">' + cellData.data.total + ' ' + table.dataset.linksLabel + '</a></strong>';
-    html += '<br><span class="text-body-secondary">' + table.dataset.coeffLabel + ' : ' + cellData.data.coeff + '</span>';
+    html += '<strong><a href="' + url + '" target="_blank" rel="noopener noreferrer">' + cellData.data.total + ' ' + labels.links + '</a></strong>';
+    html += '<br><span class="text-body-secondary">' + labels.coeff + ' : ' + cellData.data.coeff + '</span>';
     html += '</div>';
 
     // Ajouter les liens somme
     html += generateSumLinks(sortedPaths, p1Iper, p2Iper);
 
     return html;
+  }
+
+  // Hover row/col highlight (rm-hl0 = row person, rm-hl1 = col person).
+  // Anchored selectors avoid false positives between ipers sharing a
+  // numeric prefix (e.g. "4" vs "43198").
+  function clearHighlights(table) {
+    table.querySelectorAll('.rm-hl0, .rm-hl1')
+      .forEach(el => el.classList.remove('rm-hl0', 'rm-hl1'));
+  }
+
+  function paintPerson(table, id, cls) {
+    if (!id) return;
+    table.querySelectorAll(
+      '[data-id^="' + id + '_"], [data-id$="_' + id + '"]'
+    ).forEach(el => el.classList.add(cls));
+  }
+
+  // Re-create tooltips with rm-tooltip styling. Dispose any instance
+  // already created by the global initTooltips of js.txt to ensure the
+  // customClass is applied regardless of init order.
+  function initTooltips(table) {
+    table.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+      bootstrap.Tooltip.getInstance(el)?.dispose();
+      new bootstrap.Tooltip(el, { customClass: 'rm-tooltip' });
+    });
+  }
+
+  function initHover(table) {
+    table.addEventListener('mouseover', event => {
+      const t = event.target.closest('[data-id]');
+      if (!t || !table.contains(t)) return;
+      const [a, b] = t.dataset.id.split('_');
+      clearHighlights(table);
+      paintPerson(table, a, 'rm-hl0');
+      if (b && b !== a) paintPerson(table, b, 'rm-hl1');
+    });
+    table.addEventListener('mouseleave', () => clearHighlights(table));
   }
 
   /* Gestionnaire de clic sur les cellules */
@@ -241,50 +275,54 @@ const RelationMatrix = (() => {
     const parts = dataId.split('_');
     const iper1 = parts[0].replace('§', '');
     const iper2 = parts[1].replace('§', '');
-    const cellData = Object.values(window.rmData.cells).find(cell =>
-      (cell.i1.p === iper1 && cell.i2.p === iper2) ||
-      (cell.i1.p === iper2 && cell.i2.p === iper1)
+    const cellData = Object.values(window.rmData.cells).find(entry=>
+      (entry.i1.p === iper1 && entry.i2.p === iper2) ||
+      (entry.i1.p === iper2 && entry.i2.p === iper1)
     );
-    cellData.url = url;
-    showRelationModal(cellData);
+    if (!cellData) {
+      console.error('No matching cell data for', dataId);
+      return;
+    }
+    showRelationModal(cellData, url);
   }
 
-  function showRelationModal(data) {
+  function showRelationModal(data, url) {
     const modalEl = document.getElementById('rmModal');
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
 
     const modalBody = document.getElementById('rmModalBody');
 
     let htmlContent = '<div class="rm-modal-container">';
-    htmlContent += renderAllLevels(data);
+    htmlContent += renderAllLevels(data, url);
 
     // Section debug compacte, uniquement si &debug en URL
-    if (window.location.search.includes('debug')) {
+    if (urlParams.has('debug')) {
       htmlContent += '<details class="rm-debug"><summary>Debug JSON</summary>';
       htmlContent += '<pre>' + JSON.stringify(data, null, 2) + '</pre></details>';
     }
 
     htmlContent += '</div>';
 
+    modalEl.addEventListener('shown.bs.modal', () => {
+      modalBody.scrollTop = modalBody.scrollHeight;
+    }, { once: true });
     modalBody.innerHTML = htmlContent;
     modal.show();
-
-    setTimeout(() => {
-      modalBody.scrollTop = modalBody.scrollHeight;
-    }, 100);
   }
 
   return {
     init: function() {
-      if (!window.rmData || !window.rmData.cells) {
-        console.error('rmData non disponible');
+      const rmTable = document.getElementById('rm-table');
+      if (!rmTable) return;
+      labels.links = rmTable.dataset.linksLabel;
+      labels.coeff = rmTable.dataset.coeffLabel;
+      initTooltips(rmTable);
+      initHover(rmTable);
+      if (!window.rmData?.cells) {
+        console.error('rmData unavailable');
         return;
       }
-
-      const rmTable = document.getElementById('rm-table');
-      if (rmTable) {
-        rmTable.addEventListener('click', handleCellClick);
-      }
+      rmTable.addEventListener('click', handleCellClick);
     }
   };
 

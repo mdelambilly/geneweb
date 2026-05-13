@@ -44,10 +44,7 @@ ifneq ($(COMMIT_COMMENT),)
 endif
 	@printf '\n\033[1;1mGenerating configuration files\033[0m\n'
 
-refresh-version:
-	@rm -f _build/default/lib/version.ml
-
-fmt build build-geneweb gwd distrib install uninstall: info refresh-version
+fmt build build-geneweb gwd distrib install uninstall: info
 
 fmt: ## Format Ocaml code
 	@printf "\n\033[1;1mOcamlformat\033[0m\n"
@@ -127,7 +124,6 @@ endif
 	rm $(DISTRIB_DIR)/gw/dune
 	rm $(DISTRIB_DIR)/gw/etc/js/checkdata.js
 	rm $(DISTRIB_DIR)/gw/etc/js/fanchart.js
-	rm $(DISTRIB_DIR)/gw/etc/js/init_gallery.js
 	rm $(DISTRIB_DIR)/gw/etc/js/maphilight.js
 	rm $(DISTRIB_DIR)/gw/etc/js/notes_upd_gallery.js
 	rm $(DISTRIB_DIR)/gw/etc/js/p_mod.js

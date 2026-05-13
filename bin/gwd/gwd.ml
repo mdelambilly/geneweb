@@ -269,7 +269,7 @@ let add_lex_dir dir =
   Filesystem.walk_folder
     (fun e () ->
       match e with
-      | Filesystem.File s -> lexicon_list := !lexicon_list @ [ dir // s ]
+      | Filesystem.File s -> lexicon_list := !lexicon_list @ [ s ]
       | _ -> ())
     dir ()
 
@@ -288,10 +288,13 @@ let check_plugin =
     | exception Not_found -> false
     | sum -> Plugin.checksum path = sum
 
+type loaded_plugin = { name : string; unsafe : bool; forced : bool }
+
 let load_plugin ~unsafe ~forced path =
   let pname = Filename.basename path in
-  if not @@ Plugin.is_plugin_dir path then
-    Logs.err (fun k -> k "%S is not a plugin directory." path)
+  if not @@ Plugin.is_plugin_dir path then (
+    Logs.err (fun k -> k "%S is not a plugin directory." path);
+    exit 1)
   else (
     Logs.debug (fun k ->
         k "Loading plugin (unsafe = %b, forced = %b) %s..." unsafe forced pname);
@@ -309,14 +312,17 @@ let load_plugin ~unsafe ~forced path =
     if Sys.file_exists lex_dir then add_lex_dir lex_dir;
     Plugin.assets := path // "assets";
     Fun.protect ~finally:(fun () -> Plugin.assets := "") @@ fun () ->
-    load_cmxs cmxs)
+    load_cmxs cmxs;
+    { name = pname; unsafe; forced })
 
 let load_plugins Cmd.{ path; unsafe; forced; collection } =
-  if not collection then load_plugin ~unsafe ~forced path
+  if not collection then [ load_plugin ~unsafe ~forced path ]
   else
     match Plugin.compute_dependencies path with
     | Ok deps ->
-        List.iter (fun d -> load_plugin ~unsafe ~forced (path // d)) deps
+        List.fold_left
+          (fun acc d -> load_plugin ~unsafe ~forced (path // d) :: acc)
+          [] deps
     | Error cycle ->
         Logs.err (fun k ->
             k
@@ -350,37 +356,6 @@ let alias_lang lang =
       close_in ic;
       lang
     with Sys_error _ -> lang
-
-let print_renamed conf new_n =
-  let link =
-    let req = Util.get_request_string conf in
-    let new_req =
-      let len = String.length conf.bname in
-      let rec loop i =
-        if i > String.length req then ""
-        else if i >= len && String.sub req (i - len) len = conf.bname then
-          String.sub req 0 (i - len)
-          ^ new_n
-          ^ String.sub req i (String.length req - i)
-        else loop (i + 1)
-      in
-      loop 0
-    in
-    Util.get_protocol conf ^ "://" ^ Util.get_server_string conf ^ new_req
-  in
-  let env =
-    Templ.Env.(
-      empty
-      |> add "old" (Templ.Vstring (Mutil.encode conf.bname))
-      |> add "new" (Templ.Vstring (Mutil.encode new_n))
-      |> add "link" (Templ.Vstring (Mutil.encode link)))
-  in
-  try Templ.output_simple conf env "renamed"
-  with _ ->
-    let title _ = Output.printf conf "%s -&gt; %s" conf.bname new_n in
-    Hutil.header conf title;
-    Output.printf conf "<ul><li><a href=\"%s\">%s</a></li></ul>" link link;
-    Hutil.trailer conf
 
 let log_redirect from request req =
   let lock_file = !GWPARAM.adm_file "gwd.lck" in
@@ -695,41 +670,6 @@ let set_token utm from_addr base_file acc user username =
   let list = ((from_addr, xx), (utm, acc, user, username)) :: list in
   set_actlog list;
   x
-
-let index_not_name s =
-  let rec loop i =
-    if i = String.length s then i
-    else
-      match s.[i] with
-      | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '-' -> loop (i + 1)
-      | _ -> i
-  in
-  loop 0
-
-let refresh_url conf bname =
-  let url =
-    let serv = "http://" ^ Util.get_server_string conf in
-    let req =
-      if conf.cgi then
-        let str = Util.get_request_string conf in
-        let scriptname = String.sub str 0 (String.index str '?') in
-        scriptname ^ "?b=" ^ bname
-      else "/" ^ bname ^ "?"
-    in
-    serv ^ req
-  in
-  http conf Code.OK;
-  Output.header conf "Content-type: text/html";
-  Output.printf conf
-    "<head>\n\
-     <meta http-equiv=\"REFRESH\"\n\
-     content=\"1;URL=%s\">\n\
-     </head>\n\
-     <body>\n\
-     <a href=\"%s\">%s</a>\n\
-     </body>"
-    url url url;
-  raise Exit
 
 let http_preferred_language request =
   let v = Mutil.extract_param "accept-language: " '\n' request in
@@ -1278,17 +1218,45 @@ let authorization from_addr request base_env passwd access_type utm base_file
         basic_authorization from_addr request base_env passwd access_type utm
           base_file command
 
-let string_to_char_list s =
-  let rec exp i l = if i < 0 then l else exp (i - 1) (s.[i] :: l) in
-  exp (String.length s - 1) []
-
 let warning_multi_parents () =
   Logs.warn (fun k ->
       k
         "The multi-parents feature is deprecated. Setting it up will no longer \
          have any effect.")
 
-let make_conf ~secret_salt from_addr request script_name env =
+module SS = Set.Make (String)
+
+module Gwf = struct
+  type gwf_plugins = All | Allowed of SS.t
+
+  let parse_plugins base_env =
+    let l =
+      match List.assoc_opt "plugins" base_env with
+      | None -> []
+      | Some list -> String.split_on_char ',' list |> List.map String.trim
+    in
+    match l with [ "*" ] -> All | l -> Allowed (SS.of_seq @@ List.to_seq l)
+end
+
+let allowed_plugins ~loaded_plugins base_env =
+  let loaded_set =
+    List.fold_left
+      (fun acc { name; _ } -> SS.add name acc)
+      SS.empty loaded_plugins
+  in
+  let forced_set =
+    List.fold_left
+      (fun acc { name; forced; _ } -> if forced then SS.add name acc else acc)
+      SS.empty loaded_plugins
+  in
+  let gwf_plugins = Gwf.parse_plugins base_env in
+  match gwf_plugins with
+  | All -> List.of_seq @@ SS.to_seq loaded_set
+  | Allowed s ->
+      let s = SS.union s forced_set in
+      List.of_seq @@ SS.to_seq @@ SS.filter (fun p -> SS.mem p s) loaded_set
+
+let make_conf ~loaded_plugins ~secret_salt from_addr request script_name env =
   if !allowed_tags_file <> "" && not (Sys.file_exists !allowed_tags_file) then (
     let str =
       Printf.sprintf "Requested allowed_tags file (%s) absent"
@@ -1331,10 +1299,7 @@ let make_conf ~secret_salt from_addr request script_name env =
     (command, bname, passwd, env, access_type)
   in
   let lang, env = extract_assoc "lang" env in
-  let lang =
-    if lang = "" && !choose_browser_lang then http_preferred_language request
-    else lang
-  in
+  let lang = if lang = "" then http_preferred_language request else lang in
   let lang = alias_lang lang in
   let from, env =
     let x, env = extract_assoc "opt" env in
@@ -1357,9 +1322,7 @@ let make_conf ~secret_salt from_addr request script_name env =
       if x = "" then !default_lang else x
     with Not_found -> !default_lang
   in
-  let browser_lang =
-    if !choose_browser_lang then http_preferred_language request else ""
-  in
+  let browser_lang = http_preferred_language request in
   let default_lang = if browser_lang = "" then default_lang else browser_lang in
   let vowels =
     match List.assoc_opt "vowels" base_env with
@@ -1410,17 +1373,7 @@ let make_conf ~secret_salt from_addr request script_name env =
     with Not_found | Failure _ -> 150
   in
   let username, userkey = split_username ar.ar_name in
-  let forced_plugins =
-    List.fold_left
-      (fun acc Cmd.{ path; forced; _ } ->
-        if forced then Filename.basename path :: acc else acc)
-      [] !plugins
-    |> List.rev
-  in
-  let plugins =
-    List.fold_left (fun acc Cmd.{ path; _ } -> path :: acc) [] !plugins
-    |> List.rev
-  in
+  let allowed_plugins = allowed_plugins ~loaded_plugins base_env in
   if List.assoc_opt "multi_parents" base_env = Some "yes" then
     warning_multi_parents ();
   let conf =
@@ -1461,7 +1414,8 @@ let make_conf ~secret_salt from_addr request script_name env =
       public_if_no_date =
         (try List.assoc "public_if_no_date" base_env = "yes"
          with Not_found -> false);
-      setup_link = !setup_link;
+      setup_link =
+        (try List.assoc "setup_link" base_env <> "no" with Not_found -> true);
       access_by_key =
         (try List.assoc "access_by_key" base_env = "yes"
          with Not_found -> ar.ar_wizard && ar.ar_friend);
@@ -1537,8 +1491,7 @@ let make_conf ~secret_salt from_addr request script_name env =
       etc_prefix = Option.get !etc_prefix;
       cgi;
       output_conf;
-      forced_plugins;
-      plugins;
+      allowed_plugins;
       secret_salt = Some secret_salt;
       predictable_mode = !predictable_mode;
     }
@@ -1555,7 +1508,7 @@ let should_log_request contents referer user_agent =
   (* Log the request only if it's NOT one of these useless types *)
   not (is_browser_probe || is_favicon)
 
-let log tm conf from gauth request script_name contents =
+let log conf from gauth request script_name contents =
   let referer = Mutil.extract_param "referer: " '\n' request in
   let user_agent = Mutil.extract_param "user-agent: " '\n' request in
   if not (should_log_request contents referer user_agent) then ()
@@ -1637,7 +1590,7 @@ let log_and_robot_check conf auth from request script_name contents =
   in
   let suicide = Util.p_getenv conf.env "suicide" <> None in
   conf.n_connect <- Some (Robot.check tm from cnt sec conf suicide);
-  log tm conf from auth request script_name contents
+  log conf from auth request script_name contents
 
 let conf_and_connection =
   let slow_query_threshold =
@@ -1650,7 +1603,8 @@ let conf_and_connection =
     ^<^ (if conf.wizard then "_w?" else if conf.friend then "_f?" else "?")
     ^<^ contents
   in
-  fun ~secret_salt
+  fun ~loaded_plugins
+    ~secret_salt
     from
     request
     script_name
@@ -1658,7 +1612,7 @@ let conf_and_connection =
     env
   ->
     let conf, passwd_err =
-      make_conf ~secret_salt from request script_name env
+      make_conf ~loaded_plugins ~secret_salt from request script_name env
     in
     let m = Util.p_getenv env "m" in
     let is_binary =
@@ -1715,7 +1669,7 @@ let conf_and_connection =
                 if x = "" then "GeneWeb service" else "database " ^ conf.bname
               in
               refuse_auth conf from auth auth_type
-        | _, _, ({ ar_ok = false } as ar) ->
+        | _, _, ({ ar_ok = false; _ } as ar) ->
             if is_robot from then Robot.robot_error conf 0 0
             else begin
               let tm = Unix.time () in
@@ -2059,7 +2013,8 @@ let build_env request (contents : Adef.encoded_string) :
     extract_multipart boundary contents
   else (contents, Util.create_env contents)
 
-let connection ~secret_salt (addr, request) script_name contents0 =
+let connection ~loaded_plugins ~secret_salt (addr, request) script_name
+    contents0 =
   let from =
     match addr with
     | Unix.ADDR_UNIX x -> x
@@ -2084,7 +2039,8 @@ let connection ~secret_salt (addr, request) script_name contents0 =
           (not (image_request printer_conf script_name env))
           && not (misc_request printer_conf request script_name)
         then
-          conf_and_connection ~secret_salt from request script_name contents env
+          conf_and_connection ~loaded_plugins ~secret_salt from request
+            script_name contents env
       with Exit -> ()
 
 let null_reopen flags fd =
@@ -2178,7 +2134,8 @@ let display_infos ?interface ~port () =
         Fmt.(box @@ list ~sep:comma pp_path)
         (Secure.assets ()))
 
-let geneweb_server ?interface ~port ~daemon ~predictable_mode () =
+let geneweb_server ~loaded_plugins ?interface ~port ~daemon ~predictable_mode ()
+    =
   let secret_salt =
     match Unix.getenv "WSERVER" with
     | _ -> retrieve_secret_salt ()
@@ -2197,12 +2154,10 @@ let geneweb_server ?interface ~port ~daemon ~predictable_mode () =
   (* FIXME: this hack is necessary to avoid a cyclic dependency between
      `geneweb` and `geneweb-http`. We must remove it after refactoring
      the encoded string subsystem. *)
-  let connection ~secret_salt x y z =
-    connection ~secret_salt x y (Adef.encoded z)
-  in
+  let connection x y z = connection x y (Adef.encoded z) in
   Server.start ?addr:!selected_addr ~port:!selected_port ~timeout:!conn_timeout
     ~max_pending_requests:!max_pending_requests ~n_workers:!n_workers
-    (connection ~secret_salt)
+    (connection ~loaded_plugins ~secret_salt)
 
 let cgi_timeout conf tmout _ =
   Output.header conf "Content-type: text/html; charset=iso-8859-1";
@@ -2222,7 +2177,7 @@ let manage_cgi_timeout tmout =
     let _ = Unix.alarm tmout in
     ()
 
-let geneweb_cgi ~secret_salt addr script_name contents =
+let geneweb_cgi ~loaded_plugins ~secret_salt addr script_name contents =
   if Sys.unix then manage_cgi_timeout !conn_timeout;
   (try Unix.mkdir !GWPARAM.cnt_dir 0o755 with Unix.Unix_error (_, _, _) -> ());
   let add k x request =
@@ -2238,7 +2193,9 @@ let geneweb_cgi ~secret_salt addr script_name contents =
   let request = add "accept-encoding" "HTTP_ACCEPT_ENCODING" request in
   let request = add "referer" "HTTP_REFERER" request in
   let request = add "user-agent" "HTTP_USER_AGENT" request in
-  connection ~secret_salt (Unix.ADDR_UNIX addr, request) script_name contents
+  connection ~loaded_plugins ~secret_salt
+    (Unix.ADDR_UNIX addr, request)
+    script_name contents
 
 let read_input len =
   if len >= 0 then really_input_string stdin len
@@ -2267,7 +2224,10 @@ let main ?interface ~port ~daemon ~predictable_mode () =
     process "" false (Array.to_list Sys.argv)
   in
   Geneweb.GWPARAM.gwd_cmd := gwd_cmd;
-  List.iter load_plugins !plugins;
+  let loaded_plugins =
+    List.fold_left (fun acc p -> load_plugins p :: acc) [] !plugins
+    |> List.concat
+  in
   GWPARAM.init ();
   (* FIXME: this line MUST be after plugin loading as plugins can modified
      [lexicon_list]. We shouldn't modify this list in [load_plugin]. *)
@@ -2333,8 +2293,10 @@ let main ?interface ~port ~daemon ~predictable_mode () =
       try Sys.getenv "SCRIPT_NAME" with Not_found -> Sys.argv.(0)
     in
     let secret_salt = match !cgi_secret_salt with None -> "" | Some s -> s in
-    geneweb_cgi ~secret_salt addr (Filename.basename script) query)
-  else geneweb_server ?interface ~port ~daemon ~predictable_mode ()
+    geneweb_cgi ~loaded_plugins ~secret_salt addr (Filename.basename script)
+      query)
+  else
+    geneweb_server ~loaded_plugins ?interface ~port ~daemon ~predictable_mode ()
 
 let has_root_privileges () =
   if not Sys.unix then false
@@ -2365,7 +2327,6 @@ let parse_cmd () =
       auth_file := o.authorization_file;
       cache_langs := o.cache_langs;
       cache_databases := o.cache_databases;
-      choose_browser_lang := o.browser_lang;
       conn_timeout := o.connection_timeout;
       daemon := o.daemon;
       friend_passwd := o.friend_password;
@@ -2390,7 +2351,6 @@ let parse_cmd () =
       verbosity_level := o.verbosity;
       force_cgi := o.cgi;
       cgi_secret_salt := o.secret_salt;
-      setup_link := o.setup_link;
       plugins := o.plugins;
       Lock.no_lock_flag := o.no_lock;
       Mutil.particles_file := Option.value ~default:"" o.particles_file;
@@ -2419,7 +2379,6 @@ let switch_debug () =
   Sys.enable_runtime_warnings true
 
 type opened_file = { path : string; mutable oc : out_channel option }
-type log = Stdout | Stderr | File of opened_file | Syslog
 
 let pp_brackets ~style pp = Fmt.(brackets @@ styled style @@ pp)
 
@@ -2441,14 +2400,14 @@ let pp_header ppf timestamp level =
         timestamp pp_level level
 
 let reporter ~predictable_mode ppf =
-  let report src level ~over k msgf =
+  let report _src level ~over k msgf =
     let k ppf =
       Format.pp_close_box ppf ();
       Format.pp_print_newline ppf ();
       over ();
       k ()
     in
-    msgf @@ fun ?header ?tags fmt ->
+    msgf @@ fun ?header:_ ?tags fmt ->
     let timestamp =
       Option.bind tags @@ fun tags ->
       Option.bind (Logs.Tag.find Server.timestamp_tag tags) @@ fun () ->

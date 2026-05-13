@@ -271,6 +271,10 @@ let rec eval_variable (conf : Config.config) = function
       let amp = if prefix.[String.length prefix - 1] = '?' then "" else "&" in
       if str = "" then prefix
       else prefix ^ Printf.sprintf "%s%s=%s" amp evar str
+  | "prefix_clear" :: el ->
+      let prefix = (Util.commd ~excl:el conf :> string) in
+      let amp = if prefix.[String.length prefix - 1] = '?' then "" else "&" in
+      Printf.sprintf "%s%s" prefix amp
   | [ "random"; "init" ] ->
       Random.self_init ();
       ""
@@ -404,9 +408,7 @@ and eval_simple_variable conf = function
   | "left" -> conf.left
   | "nl" -> "\n"
   | "nn" -> ""
-  | "plugins" ->
-      let l = List.map Filename.basename conf.plugins in
-      String.concat ", " l
+  | "plugins" -> String.concat ", " conf.allowed_plugins
   | "bname" -> conf.bname
   | "token" -> conf.cgi_passwd
   | "bname_token" -> String.concat "_" [ conf.bname; conf.cgi_passwd ]
@@ -1394,11 +1396,28 @@ and print_simple_variable conf = function
         !GWPARAM.errors_other !GWPARAM.set_vars
   | "src_albums_list" -> (
       let dir = !GWPARAM.albums_d conf.bname in
+      let has_image path =
+        try
+          let entries = Sys.readdir path in
+          Array.exists
+            (fun f ->
+              let full = Filename.concat path f in
+              try
+                (Unix.stat full).st_kind = Unix.S_REG
+                && f <> ""
+                && f.[0] <> '.'
+                && f.[0] <> '~'
+                && ListImages.image_extension f
+              with Unix.Unix_error _ -> false)
+            entries
+        with Sys_error _ | Unix.Unix_error _ -> false
+      in
       let collect entry acc =
         match entry with
         | Filesystem.Dir path ->
             let name = Filename.basename path in
-            if name <> "" && name.[0] <> '.' then name :: acc else acc
+            if name <> "" && name.[0] <> '.' && has_image path then name :: acc
+            else acc
         | Filesystem.File _ | Filesystem.Exn _ -> acc
       in
       try

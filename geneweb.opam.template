@@ -15,7 +15,7 @@ build: [
   ["dune" "install" "-p" name "--create-install-files" name]
   ["cmdliner" "install" "tool-support"
               "--update-opam-install=%{_:name}%.install"
-              "_build/install/default/bin/gwd-rpc" {os-family != "windows"}
-              "_build/install/default/bin/gwd-rpc.exe:gwd-rpc" {os-family = "windows"}
+              "_build/install/default/bin/gwd" {os-family != "windows"}
+              "_build/install/default/bin/gwd.exe:gwd" {os-family = "windows"}
               "_build/cmdliner-install"]
 ]

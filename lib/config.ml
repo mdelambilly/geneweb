@@ -66,7 +66,7 @@ type config = {
   authorized_wizards_notes : bool;
   public_if_titles : bool;
   public_if_no_date : bool;
-  mutable setup_link : bool;
+  setup_link : bool;
   access_by_key : bool;
   private_years : int;
   private_years_death : int;
@@ -87,7 +87,7 @@ type config = {
   denied_titles : string list Lazy.t;
   request : string list;
   lexicon : (string, string) Hashtbl.t;
-  mutable charset : string;
+  charset : string;
   is_rtl : bool;
   left : string;
   right : string;
@@ -111,8 +111,7 @@ type config = {
   (* if true, the base name is in the b argument of the query string: ?b=BASE&...
      if false, the base name is the last element of the uri path: .../base?... *)
   cgi : bool;
-  forced_plugins : string list;
-  plugins : string list;
+  allowed_plugins : string list;
   secret_salt : string option;
   predictable_mode : bool;
 }
@@ -188,8 +187,7 @@ let empty =
     cgi = false;
     output_conf =
       { status = ignore; header = ignore; body = ignore; flush = ignore };
-    forced_plugins = [];
-    plugins = [];
+    allowed_plugins = [];
     secret_salt = None;
     predictable_mode = false;
   }

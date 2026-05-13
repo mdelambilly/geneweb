@@ -1135,7 +1135,6 @@ div.anchor_upd {
 /* Tom select */
 #v + .ts-wrapper .ts-dropdown-content {
   max-height: calc(100vh - 220px);
-  min-height: 12rem;
 }
 
 #fname + .ts-wrapper .ts-dropdown-content {
@@ -1146,6 +1145,18 @@ div.anchor_upd {
   content: var(--ts-placeholder, '');
   color: var(--bs-secondary-color);
   pointer-events: none;
+}
+
+/* Hover / keyboard-active indicator pour les options Tom Select.
+   La shorthand inline `style="background:..."` réinitialise
+   background-color à transparent, ce qui neutralise la règle par
+   défaut de Tom Select (.ts-dropdown .active { background-color: ... }).
+   On peint donc un overlay via inset box-shadow : ordre CSS garanti
+   par-dessus background-image, sous le contenu → dégradé conservé,
+   texte net, repère franc (barre + teinte). */
+.ts-dropdown .option.active {
+  box-shadow: inset 4px 0 0 var(--bs-primary),
+              inset 0 0 0 9999px rgba(var(--bs-primary-rgb), .15);
 }
 
 /* Capitalization unavailable in note from Ocaml
@@ -2423,3 +2434,24 @@ span.notesourcecolor {
 .moon-vis .lit{position:absolute;top:0;height:100%;
   background:linear-gradient(135deg,#fffde7,#fff9c4);
   border-radius:50%}
+
+/* pnoc validation rules for tp0_updRLM and notes_upd_gallery */
+tr.row-invalid > * {
+    --bs-table-bg: var(--bs-danger-bg-subtle);
+    --bs-table-bg-state: var(--bs-danger-bg-subtle);
+}
+tr.row-valid-flash > * {
+    --bs-table-bg: var(--bs-success-bg-subtle);
+    --bs-table-bg-state: var(--bs-success-bg-subtle);
+}
+input.row-invalid {
+    background-color: var(--bs-danger-bg-subtle);
+    border-color: var(--bs-danger-border-subtle);
+}
+input.row-valid-flash {
+    background-color: var(--bs-success-bg-subtle);
+    border-color: var(--bs-success-border-subtle);
+}
+a.disabled {
+    pointer-events: none;
+}

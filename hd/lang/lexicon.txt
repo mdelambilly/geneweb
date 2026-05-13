@@ -5254,6 +5254,11 @@ sv: konfigurationsparametrar
 tr: yapılandırma parametreleri
 zh: 配置参数
 
+    confirm import folder
+en: import {n} images from directory “{f}”?
+fr: importer {n} images depuis le répertoire « {f} » ?
+de: {n} Bilder aus dem Verzeichnis „{f}” importieren?
+
     confirmation
 co: cresima
 de: Firmung
@@ -6954,6 +6959,11 @@ sk: vytvor
 sl: ustvari
 sv: skapa
 tr: oluştur
+
+    create gallery
+de: Galerie/eine neue Galerie erstellen/eine neue Galerie ausgehend von diesem Bild erstellen
+en: gallery/create a new gallery/create a new gallery starting with this image
+fr: galerie/créer une nouvelle galerie/créer une nouvelle galerie à partir de cette image
 
     cremated
 af: veras
@@ -11065,6 +11075,11 @@ sl: seznam mož/žena (brez potomcev)
 sv: förteckning över makarna (icke ättlingar)
 tr: eşler dizini (nesil yok)
 
+    individual images
+de: persönliche Bilder (Schlüsselverzeichnisse)
+en: individual images (key directories)
+fr: images individuelles (répertoires clés)
+
     individual notes
 co: note nant’à l’individuu
 de: Hinweise zur Person
@@ -11915,10 +11930,12 @@ tr: bağlantılı resimler
 zh: 关联图像
 
     reorder images
+de: Bilder umsortieren
 en: reorder images
 fr: réordonner les images
 
     thumbnail
+de: Miniaturbild
 en: thumbnail
 fr: vignette
 
@@ -11935,12 +11952,48 @@ en: galleries where the person appears
 fr: galeries où la personne apparaît
 
     gallery
+de: Bildergalerie
 en: images gallery
 fr: galerie d’images
 
     gallery backlinks
+de: Seiten mit dieser Galerie
 en: pages where this gallery appears
 fr: pages où cette galerie apparaît
+
+    gallery editor
+af: interaktiewe galerie-redigeerder
+bg: редактор на интерактивни галерии
+br: kizellerez galeriioù etrekwezhiat
+ca: editor de galeries interactives
+co: editore di gallerie interattive
+cs: editor interaktivních galerií
+da: editor for interaktive gallerier
+de: Editor für interaktive Galerien
+en: interactive gallery editor
+eo: redaktilo de interagaj galerioj
+es: editor de galerías interactivas
+et: interaktiivsete galeriide redaktor
+fi: interaktiivisten gallerioiden editori
+fr: éditeur de galeries interactives
+he: עורך גלריות אינטראקטיביות
+is: ritill fyrir gagnvirk myndasöfn
+it: editor di gallerie interattive
+lt: interaktyvių galerijų redaktorius
+lv: interaktīvo galeriju redaktors
+nl: editor voor interactieve galerijen
+no: editor for interaktive gallerier
+oc: editor de galariás interactives
+pl: edytor interaktywnych galerii
+pt: editor de galerias interativas
+pt-br: editor de galerias interativas
+ro: editor de galerii interactive
+ru: редактор интерактивных галерей
+sk: editor interaktívnych galérií
+sl: urejevalnik interaktivnih galerij
+sv: redigerare för interaktiva gallerier
+tr: etkileşimli galeri düzenleyicisi
+zh: 交互式图库编辑器
 
     gallery index
 co: indice di a galleria
@@ -11955,10 +12008,10 @@ en: pages or notes where page is referenced
 fr: pages ou notes où la page est citée
 
     linked pages help
-co: note, pagine, albumi o gallerie induve a persona hè referenzata
-de: Notizen, Seiten, Alben oder Gallerien, wo die Person erwähnt wird
-en: notes, pages, albums or galleries where person is referenced
-fr: notes, pages, albums ou galleries où la personne est citée
+co: note, pagine o gallerie induve a persona hè referenzata
+de: Notizen, Seiten oder Galerien, wo die Person erwähnt wird
+en: notes, pages or galleries where person is referenced
+fr: notes, pages ou galleries où la personne est citée
 
     linked pages
 bg: свързани страници
@@ -11989,6 +12042,11 @@ sk: spojené stránky
 sl: povezane strani
 sv: länkade sidor
 tr: bağlantılı sayfalar
+
+    list/add images from directory
+de: alle Bilder aus diesem Verzeichnis auflisten/alle Bilder aus diesem Verzeichnis zur aktuellen Galerie hinzufügen
+en: list all images from this directory/add all images from this directory to current gallery
+fr: lister toutes les images de ce répertoire/ajouter toutes les images de ce répertoire à la galerie courante
 
     list eclair
 co: lista rapida
@@ -12182,6 +12240,7 @@ en: loading in progress…/loading error
 fr: chargement en cours…/erreur de chargement
 
     lock group
+de: diese Gruppe verriegeln
 en: lock this group
 fr: verrouiller ce groupe
 
@@ -13386,7 +13445,7 @@ fr: modifier la section %d
 
     modify gallery
 co: mudificà a fiura&#047;galleria
-de: das Bild ändern&#047;die Gallerie
+de: das Bild&#047;die Galerie ändern
 en: modify the image&#047;the gallery
 fr: modifier l’image&#047;la gallerie
 
@@ -13977,7 +14036,7 @@ tr: yeni ad
 
     new note name
 co: nome di a nota nova/nota nova
-de: Name der neuen Notiz/neuen Notiz
+de: Name der neuen Notiz/neue Notiz
 en: name of the new note/new note
 fr: nom de la nouvelle note/nouvelle note
 
@@ -14414,6 +14473,7 @@ sv: ogifta
 tr: evli değil
 
     document/documents
+de: Dokument/Dokumente
 en: document/documents
 fr: document/documents
 
@@ -14459,7 +14519,7 @@ ca: nota modificada
 co: nota mudificata
 cs: poznámka změněna
 da: note ændret
-de: geänderte Notiz
+de: Notiz geändert
 en: note modified
 eo: noto modifita
 es: nota modificada
@@ -14562,7 +14622,7 @@ en: Configuration error
 fr: Erreur de configuration
 
     NOTIF incorrect person env
-de: Ungültige Person-Konfiguration (em=, ei=, ep=, en=, eoc=).
+de: Ungültige Personen-Konfiguration (em=, ei=, ep=, en=, eoc=).
 en: Invalid person configuration (em=, ei=, ep=, en=, eoc=).
 fr: Configuration de personne incorrecte (em=, ei=, ep=, en=, eoc=).
 
@@ -14587,7 +14647,7 @@ en: Missing <b>s=</b> parameter for m=DOC.
 fr: Paramètre <b>s=</b> manquant pour m=DOC.
 
     NOTIF_TT missing p and n for relation
-de: Fehlender Parameters
+de: Fehlende Parameter
 en: Missing parameters
 fr: Paramètres manquant
 
@@ -14617,7 +14677,7 @@ en: Persons for relation computation not found.
 fr: Personnes pour le calcul de relation introuvables.
 
     NOTIF_TT missing fn and sn for search
-de: Fehlender Parameters
+de: Fehlende Parameter
 en: Missing parameters
 fr: Paramètres manquant
 
@@ -14627,7 +14687,7 @@ en: Missing <b>fn=</b> and <b>sn=</b> parameters for search.
 fr: Paramètres <b>fn=</b> et <b>sn=</b> manquants pour la recherche.
 
     NOTIF_TT incompatible notes_links
-de: Inkompatibles verknüpfte Notizen Format
+de: Format der verknüpften Notizen ist inkompatibel
 en: Incompatible linked notes format
 fr: Format des notes liées incompatible
 
@@ -14909,6 +14969,7 @@ en: number of rows
 fr: nombre de lignes
 
     number of unions
+de: Anzahl der Beziehungen
 en: number of unions
 fr: nombre de relations
 
@@ -15854,6 +15915,7 @@ en: phonetic variants
 fr: variantes phonétiques
 
     data quality
+de: Datenqualität
 en: data quality
 fr: qualité des données
 
@@ -16442,41 +16504,6 @@ sl: prikaži naključnega posameznika
 sv: visa en slumpmässig individ
 tr: rastgele bir bireyi göster
 zh: 显示随机个体
-
-    reactive image map editor
-af: redigeerder van reaktiewe beeldkaarte
-bg: редактор на интерактивни картографски изображения
-br: kizellerez kartenn skeudennoù kenwerzhel
-ca: editor de mapes d'imatges reactives
-co: editore di cartugrafia di fiura reattiva
-cs: editor map reaktivních obrázků
-da: editor for reaktive billedkort
-de: Editor für interaktive Bildkarten
-en: reactive image map editor
-eo: redaktilo de reagaj bildmapoj
-es: editor de mapas de imágenes reactivas
-et: reaktiivsete pildikaartide redaktor
-fi: reaktiivisten kuvakarttojen editori
-fr: éditeur de carte d’image réactive
-he: עורך מפת תמונה אינטראקטיבית
-is: ritill fyrir viðbragðskortamyndir
-it: editor di mappe di immagini reattive
-lt: reaguojančių vaizdo žemėlapių redaktorius
-lv: interaktīvo attēlu karšu redaktors
-nl: editor voor reactieve afbeeldingskaarten
-no: editor for reaktive bildekart
-oc: editor de mapas d’imatges reactivas
-pl: edytor map obrazów reaktywnych
-pt: editor de mapas de imagens reativas
-pt-br: editor de mapas de imagens reativas
-ro: editor de hărți de imagini reactive
-ru: редактор интерактивных карт изображений
-sk: editor máp reaktívnych obrázkov
-sl: urejevalnik odzivnih slikovnih kart
-sv: redigerare för reaktiva bildkartor
-tr: reaktif resim haritası düzenleyicisi
-zh: 响应式图像地图编辑器
-
 
     recensement
 co: censimentu
@@ -17419,10 +17446,12 @@ fr: fichiers non référencés au format [[[fichier]]] ou référencés par des 
 
     files not in db
 co: schedarii micca referenzati
+de: nicht referenzierte Dateien
 en: files not referenced
 fr: fichiers non référencés 
 
     files not in db help
+de: nicht referenzierte Dateien in den Notizen oder Seiten (update_nldb ausführen könnte notwendig sein)
 en: files not referenced in notes or pages (running update_nldb may be necessary)
 fr: fichiers non référencés dans les notes ou pages (exécuter update_nldb peut être nécessaire)
 
@@ -20208,6 +20237,7 @@ sv: detta forum har moderator
 tr: bu forum yönetilmektedir
 
     this notes file already exists
+de: der Name dieser neuen Notiz wird bereits verwendet
 en: the name of this new note is already used
 fr: le nom de cette nouvelle note est déjà utilisé
 
